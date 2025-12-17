@@ -15,6 +15,7 @@ ImageIO==2.37.2
 lazy_loader==0.4
 networkx==3.6.1
 numpy==2.2.6
+opencv-contrib-python==4.12.0.88
 opencv-python==4.12.0.88
 openpyxl==3.1.5
 packaging==25.0
