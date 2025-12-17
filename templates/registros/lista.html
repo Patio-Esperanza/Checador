@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Registros de Asistencia - Sistema de Asistencias{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <h1 class="text-3xl font-bold text-gray-800">
+        <i class="fas fa-list mr-2 text-blue-600"></i>Registros de Asistencia
+    </h1>
+
+    <!-- Stats Cards -->
+    <div class="grid md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-gray-600 text-sm">Total Registros</p>
+            <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.total_registros }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-gray-600 text-sm">Retardos</p>
+            <p class="text-2xl font-bold text-red-600 mt-1">{{ stats.retardos }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-gray-600 text-sm">Registros Completos</p>
+            <p class="text-2xl font-bold text-green-600 mt-1">{{ stats.registros_completos }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-gray-600 text-sm">Horas Totales</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1">{{ stats.horas_totales|floatformat:1 }}</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="GET" class="grid md:grid-cols-4 gap-4">
+            <div>
+                <label for="fecha_inicio" class="block text-gray-700 font-semibold mb-2">Fecha Inicio</label>
+                <input 
+                    type="date" 
+                    id="fecha_inicio" 
+                    name="fecha_inicio" 
+                    value="{{ fecha_inicio }}"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+            <div>
+                <label for="fecha_fin" class="block text-gray-700 font-semibold mb-2">Fecha Fin</label>
+                <input 
+                    type="date" 
+                    id="fecha_fin" 
+                    name="fecha_fin" 
+                    value="{{ fecha_fin }}"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+            <div>
+                <label for="empleado" class="block text-gray-700 font-semibold mb-2">Empleado</label>
+                <select 
+                    id="empleado" 
+                    name="empleado"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">Todos</option>
+                    {% for emp in empleados %}
+                        <option value="{{ emp.pk }}" {% if empleado_selected|stringformat:"s" == emp.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ emp.codigo_empleado }} - {{ emp.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition w-full">
+                    <i class="fas fa-search mr-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Records List -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Fecha</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Empleado</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Entrada</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Salida</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Horas</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Reconocimiento</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for registro in registros %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm">{{ registro.fecha|date:"d/m/Y" }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <div>
+                                    <p class="font-medium">{{ registro.empleado.codigo_empleado }}</p>
+                                    <p class="text-gray-500 text-xs">{{ registro.empleado.nombre_completo }}</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if registro.hora_entrada %}
+                                    {{ registro.hora_entrada|time:"H:i" }}
+                                {% else %}
+                                    <span class="text-gray-400">--:--</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if registro.hora_salida %}
+                                    {{ registro.hora_salida|time:"H:i" }}
+                                {% else %}
+                                    <span class="text-gray-400">--:--</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm">{{ registro.tiempo_trabajado_str }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if registro.retardo %}
+                                    <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                        <i class="fas fa-exclamation-circle"></i> Retardo
+                                    </span>
+                                {% elif registro.hora_entrada %}
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                        <i class="fas fa-check-circle"></i> A tiempo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if registro.reconocimiento_facial %}
+                                    <span class="text-blue-600" title="Confianza: {{ registro.confianza_reconocimiento|floatformat:1 }}%">
+                                        <i class="fas fa-camera"></i>
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                <i class="fas fa-list text-4xl mb-2"></i>
+                                <p>No se encontraron registros</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

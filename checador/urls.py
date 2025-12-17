@@ -19,10 +19,26 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from registros.frontend_views import facial_recognition_page
+from checador import views
 
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
+    
+    # Autenticación web
+    path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
+    path('logout/', views.logout_view, name='logout'),
+    
+    # Dashboard
+    path('dashboard/', views.dashboard_view, name='dashboard'),
+    
+    # Vistas de empleados y registros (staff)
+    path('empleados/', views.empleados_lista_view, name='empleados_lista'),
+    path('registros/', views.registros_lista_view, name='registros_lista'),
+    
+    # Marcar asistencia
+    path('marcar-asistencia/', views.marcar_asistencia_view, name='marcar_asistencia'),
     
     # Página principal - Reconocimiento Facial
     path('', facial_recognition_page, name='home'),

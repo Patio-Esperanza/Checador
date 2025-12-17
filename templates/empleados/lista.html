@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Empleados - Sistema de Asistencias{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-users mr-2 text-blue-600"></i>Empleados
+        </h1>
+        <a href="/admin/empleados/empleado/add/" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition">
+            <i class="fas fa-plus mr-2"></i>Nuevo Empleado
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="GET" class="grid md:grid-cols-3 gap-4">
+            <div>
+                <label for="search" class="block text-gray-700 font-semibold mb-2">Buscar</label>
+                <input 
+                    type="text" 
+                    id="search" 
+                    name="search" 
+                    value="{{ search }}"
+                    placeholder="Nombre, código..."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+            <div>
+                <label for="departamento" class="block text-gray-700 font-semibold mb-2">Departamento</label>
+                <select 
+                    id="departamento" 
+                    name="departamento"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">Todos</option>
+                    {% for depto in departamentos %}
+                        <option value="{{ depto }}" {% if departamento_selected == depto %}selected{% endif %}>{{ depto }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition w-full">
+                    <i class="fas fa-search mr-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Employee List -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Código</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Departamento</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Puesto</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Rostro</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for empleado in empleados %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ empleado.codigo_empleado }}</td>
+                            <td class="px-6 py-4 text-sm">{{ empleado.nombre_completo }}</td>
+                            <td class="px-6 py-4 text-sm">{{ empleado.departamento }}</td>
+                            <td class="px-6 py-4 text-sm">{{ empleado.puesto|default:"-" }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                {% if empleado.tiene_rostro_registrado %}
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                        <i class="fas fa-check-circle"></i> Registrado
+                                    </span>
+                                {% else %}
+                                    <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
+                                        <i class="fas fa-exclamation-circle"></i> Sin registrar
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                <div class="flex gap-2">
+                                    <a href="/admin/empleados/empleado/{{ empleado.pk }}/change/" class="text-blue-600 hover:text-blue-800" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if not empleado.tiene_rostro_registrado %}
+                                        <a href="{% url 'empleados:register_face' empleado.pk %}" class="text-green-600 hover:text-green-800" title="Registrar Rostro">
+                                            <i class="fas fa-user-circle"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                <i class="fas fa-users text-4xl mb-2"></i>
+                                <p>No se encontraron empleados</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

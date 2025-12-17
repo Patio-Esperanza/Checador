@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Sistema de Asistencias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-2xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
+                <i class="fas fa-user-plus text-5xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">Crear Cuenta</h1>
+            <p class="text-gray-600 mt-2">Completa el formulario para registrarte</p>
+        </div>
+
+        <!-- Register Card -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 {% if message.tags == 'error' %}bg-red-100 border-red-400 text-red-700{% elif message.tags == 'success' %}bg-green-100 border-green-400 text-green-700{% else %}bg-blue-100 border-blue-400 text-blue-700{% endif %} border px-4 py-3 rounded">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="{% url 'register' %}">
+                {% csrf_token %}
+                
+                <!-- Información Personal -->
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user mr-2 text-blue-600"></i>
+                        Información Personal
+                    </h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- First Name -->
+                        <div>
+                            <label for="first_name" class="block text-gray-700 font-semibold mb-2">
+                                Nombre(s) <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="first_name" 
+                                name="first_name" 
+                                required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Juan"
+                            >
+                        </div>
+
+                        <!-- Last Name -->
+                        <div>
+                            <label for="last_name" class="block text-gray-700 font-semibold mb-2">
+                                Apellidos <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="last_name" 
+                                name="last_name" 
+                                required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Pérez García"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cuenta de Usuario -->
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-id-card mr-2 text-blue-600"></i>
+                        Cuenta de Usuario
+                    </h2>
+                    
+                    <!-- Username -->
+                    <div class="mb-4">
+                        <label for="username" class="block text-gray-700 font-semibold mb-2">
+                            Nombre de Usuario <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="jperez"
+                        >
+                        <p class="text-sm text-gray-500 mt-1">Usa solo letras, números y guiones bajos</p>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-4">
+                        <label for="email" class="block text-gray-700 font-semibold mb-2">
+                            Correo Electrónico <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="juan.perez@empresa.com"
+                        >
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Password -->
+                        <div>
+                            <label for="password" class="block text-gray-700 font-semibold mb-2">
+                                Contraseña <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                required
+                                minlength="8"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="••••••••"
+                            >
+                        </div>
+
+                        <!-- Password Confirm -->
+                        <div>
+                            <label for="password_confirm" class="block text-gray-700 font-semibold mb-2">
+                                Confirmar Contraseña <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="password" 
+                                id="password_confirm" 
+                                name="password_confirm" 
+                                required
+                                minlength="8"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="••••••••"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información Laboral -->
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-briefcase mr-2 text-blue-600"></i>
+                        Información Laboral
+                    </h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Código Empleado -->
+                        <div>
+                            <label for="codigo_empleado" class="block text-gray-700 font-semibold mb-2">
+                                Código de Empleado <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="codigo_empleado" 
+                                name="codigo_empleado" 
+                                required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="EMP001"
+                            >
+                        </div>
+
+                        <!-- Departamento -->
+                        <div>
+                            <label for="departamento" class="block text-gray-700 font-semibold mb-2">
+                                Departamento <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="departamento" 
+                                name="departamento" 
+                                required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Desarrollo"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Puesto -->
+                    <div class="mt-4">
+                        <label for="puesto" class="block text-gray-700 font-semibold mb-2">
+                            Puesto (Opcional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="puesto" 
+                            name="puesto" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Desarrollador Senior"
+                        >
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                        <div class="text-sm text-gray-700">
+                            <p class="font-semibold mb-1">Siguiente paso:</p>
+                            <p>Después de crear tu cuenta, te pediremos que registres tu rostro para poder marcar asistencia usando reconocimiento facial.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition transform hover:scale-105 shadow-lg"
+                >
+                    <i class="fas fa-user-plus mr-2"></i>Crear Cuenta
+                </button>
+            </form>
+
+            <!-- Login Link -->
+            <div class="text-center mt-6 pt-6 border-t border-gray-200">
+                <p class="text-gray-600">
+                    ¿Ya tienes una cuenta?
+                    <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-700 font-semibold">
+                        Inicia sesión aquí
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6 text-gray-600 text-sm">
+            <p>&copy; 2025 Sistema de Control de Asistencias</p>
+        </div>
+    </div>
+
+    <script>
+        // Validar que las contraseñas coincidan
+        const form = document.querySelector('form');
+        const password = document.getElementById('password');
+        const passwordConfirm = document.getElementById('password_confirm');
+
+        form.addEventListener('submit', function(e) {
+            if (password.value !== passwordConfirm.value) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden');
+                passwordConfirm.focus();
+            }
+        });
+    </script>
+</body>
+</html>

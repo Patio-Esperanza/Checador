@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Asistencias{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Header -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">
+                    ¡Bienvenido, {{ user.get_full_name|default:user.username }}!
+                </h1>
+                <p class="text-gray-600 mt-1">
+                    <i class="fas fa-calendar mr-1"></i>
+                    {{ today|date:"l, d E Y" }}
+                </p>
+            </div>
+            {% if empleado and not empleado.tiene_rostro_registrado %}
+                <a href="{% url 'empleados:register_face' empleado.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold transition">
+                    <i class="fas fa-user-circle mr-2"></i>Registrar Rostro
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if empleado %}
+        <!-- Registro de Hoy -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-clock mr-2 text-blue-600"></i>Asistencia de Hoy
+            </h2>
+
+            {% if registro_hoy %}
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-1">Hora de Entrada</p>
+                        <p class="text-2xl font-bold text-green-700">
+                            {% if registro_hoy.hora_entrada %}
+                                {{ registro_hoy.hora_entrada|time:"H:i" }}
+                            {% else %}
+                                --:--
+                            {% endif %}
+                        </p>
+                        {% if registro_hoy.retardo %}
+                            <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded mt-2 inline-block">
+                                <i class="fas fa-exclamation-circle"></i> Retardo
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-1">Hora de Salida</p>
+                        <p class="text-2xl font-bold text-blue-700">
+                            {% if registro_hoy.hora_salida %}
+                                {{ registro_hoy.hora_salida|time:"H:i" }}
+                            {% else %}
+                                --:--
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                        <p class="text-sm text-gray-600 mb-1">Horas Trabajadas</p>
+                        <p class="text-2xl font-bold text-purple-700">
+                            {{ registro_hoy.tiempo_trabajado_str }}
+                        </p>
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-600 mb-4">Aún no has marcado asistencia hoy</p>
+                    <a href="{% url 'facial_recognition' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold inline-block transition">
+                        <i class="fas fa-camera mr-2"></i>Marcar Asistencia
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Estadísticas del Mes -->
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Días Trabajados</p>
+                        <p class="text-3xl font-bold text-gray-800 mt-1">{{ dias_trabajados }}</p>
+                    </div>
+                    <div class="bg-blue-100 rounded-full p-4">
+                        <i class="fas fa-calendar-check text-3xl text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Retardos</p>
+                        <p class="text-3xl font-bold text-gray-800 mt-1">{{ retardos_mes }}</p>
+                    </div>
+                    <div class="bg-red-100 rounded-full p-4">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Horas Totales</p>
+                        <p class="text-3xl font-bold text-gray-800 mt-1">{{ horas_totales|floatformat:1 }}</p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-4">
+                        <i class="fas fa-clock text-3xl text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Últimos Registros -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-history mr-2 text-blue-600"></i>Últimos Registros
+            </h2>
+
+            {% if ultimos_registros %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fecha</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Entrada</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Salida</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Horas</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for registro in ultimos_registros %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm">{{ registro.fecha|date:"d/m/Y" }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        {% if registro.hora_entrada %}
+                                            {{ registro.hora_entrada|time:"H:i" }}
+                                        {% else %}
+                                            <span class="text-gray-400">--:--</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm">
+                                        {% if registro.hora_salida %}
+                                            {{ registro.hora_salida|time:"H:i" }}
+                                        {% else %}
+                                            <span class="text-gray-400">--:--</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm">{{ registro.tiempo_trabajado_str }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        {% if registro.retardo %}
+                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                                <i class="fas fa-exclamation-circle"></i> Retardo
+                                            </span>
+                                        {% else %}
+                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                                <i class="fas fa-check-circle"></i> A tiempo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-600 text-center py-4">No hay registros para mostrar</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Admin Stats -->
+    {% if user.is_staff %}
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-md p-6 text-white">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-chart-line mr-2"></i>Estadísticas del Sistema
+            </h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <p class="text-sm opacity-90">Empleados Activos</p>
+                    <p class="text-3xl font-bold mt-1">{{ total_empleados }}</p>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <p class="text-sm opacity-90">Registros Hoy</p>
+                    <p class="text-3xl font-bold mt-1">{{ registros_hoy }}</p>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <p class="text-sm opacity-90">Sin Rostro</p>
+                    <p class="text-3xl font-bold mt-1">{{ empleados_sin_rostro }}</p>
+                </div>
+            </div>
+            <div class="mt-4 flex gap-4">
+                <a href="{% url 'empleados_lista' %}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+                    <i class="fas fa-users mr-2"></i>Ver Empleados
+                </a>
+                <a href="{% url 'registros_lista' %}" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">
+                    <i class="fas fa-list mr-2"></i>Ver Registros
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

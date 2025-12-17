@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from django.db import models
 from .models import Empleado
 from .serializers import (
@@ -108,3 +110,66 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'message': message
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required
+def register_face_view(request, empleado_id):
+    """
+    Vista para renderizar el template de registro facial.
+    Requiere autenticación.
+    """
+    empleado = get_object_or_404(Empleado, pk=empleado_id)
+    
+    # Verificar permisos: solo staff o el mismo empleado pueden registrar
+    if not request.user.is_staff and request.user != empleado.user:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("No tienes permisos para acceder a esta página.")
+    
+    return render(request, 'register_face.html', {
+        'empleado': empleado
+    })
+
+
+@login_required
+def register_face_post(request, empleado_id):
+    """
+    Vista POST para registrar el rostro usando sesiones de Django.
+    Alternativa al endpoint de API que requiere JWT.
+    """
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+    
+    empleado = get_object_or_404(Empleado, pk=empleado_id)
+    
+    # Verificar permisos: solo staff o el mismo empleado pueden registrar
+    if not request.user.is_staff and request.user != empleado.user:
+        return JsonResponse({'success': False, 'message': 'No tienes permisos'}, status=403)
+    
+    # Verificar que se envió una foto
+    if 'foto_rostro' not in request.FILES:
+        return JsonResponse({'success': False, 'message': 'No se envió ninguna foto'}, status=400)
+    
+    foto_rostro = request.FILES['foto_rostro']
+    
+    # Usar el servicio de reconocimiento facial
+    success, message = FacialRecognitionService.register_employee_face(
+        empleado,
+        foto_rostro
+    )
+    
+    if success:
+        # Guardar la foto también en el modelo
+        empleado.foto_rostro = foto_rostro
+        empleado.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+        }, status=200)
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': message
+        }, status=400)
