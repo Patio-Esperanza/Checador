@@ -1,8 +1,24 @@
+# Build tools for compiling dlib
+build-essential
+cmake
+g++
+gfortran
+pkg-config
+
+# OpenCV and face_recognition dependencies
 libgl1-mesa-glx
 libglib2.0-0
+libglib2.0-dev
 libsm6
 libxext6
 libxrender-dev
 libgomp1
-libglib2.0-dev
-cmake
+
+# dlib specific dependencies
+libopenblas-dev
+liblapack-dev
+libx11-dev
+
+# Additional image processing libraries
+libjpeg-dev
+libpng-dev
