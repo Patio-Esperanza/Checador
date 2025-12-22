@@ -23,6 +23,7 @@ numpy<2.0
 scipy==1.13.1
 scikit-image==0.24.0
 pillow==10.4.0
+dlib==19.24.2
 # Additional dependencies
 ImageIO==2.37.2
 lazy_loader==0.4
