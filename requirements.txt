@@ -10,7 +10,7 @@ psycopg2-binary==2.9.11
 
 # Core dependencies
 asgiref==3.11.0
-sqlparse==0.5.4
+sqlparse==0.5.5
 PyJWT==2.10.1
 
 # Face recognition stack (dlib installed separately in build.sh)
@@ -19,24 +19,24 @@ face_recognition_models==0.3.0
 opencv-python-headless==4.10.0.84
 
 # Scientific computing
-numpy<2.0
-scipy==1.13.1
-scikit-image==0.24.0
-pillow==10.4.0
-dlib==19.24.2
+numpy==2.2.6
+scipy==1.16.3
+scikit-image==0.26.0
+pillow==12.0.0
+dlib==20.0.0
 # Additional dependencies
 ImageIO==2.37.2
 lazy_loader==0.4
 networkx==3.6.1
 packaging==25.0
-tifffile==2024.8.30
+tifffile==2025.12.20
 openpyxl==3.1.5
-reportlab==4.2.5
-click==8.1.7
-charset-normalizer==3.3.2
+reportlab==4.4.7
+click==8.3.1
+charset-normalizer==3.4.4
 et_xmlfile==2.0.0
 
 # Production server
 gunicorn==23.0.0
 whitenoise==6.8.2
-dj-database-url==2.2.0
+dj-database-url==3.0.1
