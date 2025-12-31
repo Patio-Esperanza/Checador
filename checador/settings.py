@@ -100,16 +100,11 @@ WSGI_APPLICATION = 'checador.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Default database configuration (SQLite for development)
 DATABASES = {
     'default': {
-        'ENGINE': get_env('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-        # 'ENGINE': get_env('DB_ENGINE', default='django.db.backends.postgresql'),
-        # 'NAME': get_env('DB_NAME', default='checador_db'),
-        # 'USER': get_env('DB_USER', default='postgres'),
-        # 'PASSWORD': get_env('DB_PASSWORD', default='postgres'),
-        # 'HOST': get_env('DB_HOST', default='localhost'),
-        # 'PORT': get_env('DB_PORT', default='5432'),
     }
 }
 
@@ -189,12 +184,23 @@ if 'RENDER' in os.environ:
 # Database configuration from DATABASE_URL (for production)
 if 'DATABASE_URL' in os.environ:
     import dj_database_url
+    db_config = dj_database_url.config(
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+    # Configure SSL based on database engine
+    db_engine = db_config.get('ENGINE', '')
+    if 'postgresql' in db_engine:
+        db_config['OPTIONS'] = {
+            'sslmode': 'require',
+        }
+    elif 'mysql' in db_engine:
+        db_config['OPTIONS'] = {
+            'ssl': {'ssl-mode': 'REQUIRED'},
+            'charset': 'utf8mb4',
+        }
     DATABASES = {
-        'default': dj_database_url.config(
-            conn_max_age=600,
-            conn_health_checks=True,
-            ssl_require=True,
-        )
+        'default': db_config
     }
 
 # REST Framework

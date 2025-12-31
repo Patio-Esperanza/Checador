@@ -7,6 +7,7 @@ python-decouple==3.8
 
 # Database
 psycopg2-binary==2.9.11
+mysqlclient==2.2.8
 
 # Core dependencies
 asgiref==3.11.0

@@ -19,3 +19,13 @@ services:
     value: "checador.settings"
   - key: PYTHONUNBUFFERED
     value: "1"
+  - key: SECRET_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+
+databases:
+- name: checador-db
+  engine: PG
+  version: "16"
+  production: false
+  cluster_name: checador-cluster

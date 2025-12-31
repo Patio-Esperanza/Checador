@@ -107,6 +107,23 @@ El proyecto incluye un `Dockerfile` optimizado que:
 
 ✅ **Solucionado**: Ahora usamos Docker que tiene todas las herramientas de compilación
 
+### Error: "ModuleNotFoundError: No module named 'MySQLdb'" o "Error loading MySQLdb module"
+
+**Causa**: Digital Ocean auto-detectó una base de datos MySQL en lugar de PostgreSQL.
+
+**Solución**:
+1. En el dashboard de Digital Ocean, ve a tu app
+2. En la sección "Resources" o "Components", elimina cualquier base de datos MySQL existente
+3. El `app.yaml` ahora está configurado para crear automáticamente una base de datos PostgreSQL
+4. Redeploy la aplicación
+5. Digital Ocean configurará automáticamente la variable `DATABASE_URL` con PostgreSQL
+
+**Alternativa manual**:
+Si ya tienes una base de datos PostgreSQL en Digital Ocean:
+1. Ve a "Settings" > "App-Level Environment Variables"
+2. Verifica que `DATABASE_URL` apunte a PostgreSQL (debe empezar con `postgresql://`)
+3. Si apunta a MySQL (empieza con `mysql://`), cámbiala manualmente
+
 ### Error: "collectstatic failed"
 
 Verifica que `STATIC_ROOT` esté configurado en `settings.py`:
