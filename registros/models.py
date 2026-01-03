@@ -1,17 +1,19 @@
 from django.db import models
 from django.utils import timezone
 from datetime import datetime, timedelta
+
+from checador.storage_backends import MediaStorage
 from empleados.models import Empleado
 
 
 class RegistroAsistencia(models.Model):
     """Modelo para registrar asistencias de empleados"""
-    
+
     TIPO_REGISTRO_CHOICES = [
         ('entrada', 'Entrada'),
         ('salida', 'Salida'),
     ]
-    
+
     empleado = models.ForeignKey(
         Empleado,
         on_delete=models.CASCADE,
@@ -36,13 +38,14 @@ class RegistroAsistencia(models.Model):
         default=0,
         verbose_name='Horas Trabajadas'
     )
-    
+
     # Reconocimiento facial
     reconocimiento_facial = models.BooleanField(
         default=False,
         verbose_name='Reconocimiento Facial'
     )
     foto_registro = models.ImageField(
+        storage=MediaStorage(),
         upload_to='asistencias/',
         null=True,
         blank=True,
@@ -54,7 +57,7 @@ class RegistroAsistencia(models.Model):
         verbose_name='Confianza del Reconocimiento',
         help_text='Porcentaje de confianza del reconocimiento facial'
     )
-    
+
     # Ubicación (opcional para GPS)
     ubicacion = models.CharField(
         max_length=255,
@@ -75,7 +78,7 @@ class RegistroAsistencia(models.Model):
         blank=True,
         verbose_name='Longitud'
     )
-    
+
     # Validación y estado
     retardo = models.BooleanField(
         default=False,
@@ -89,39 +92,39 @@ class RegistroAsistencia(models.Model):
         blank=True,
         verbose_name='Notas'
     )
-    
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Registro de Asistencia'
         verbose_name_plural = 'Registros de Asistencia'
         ordering = ['-fecha', '-hora_entrada']
         unique_together = ['empleado', 'fecha']
-    
+
     def __str__(self):
         return f"{self.empleado.codigo_empleado} - {self.fecha}"
-    
+
     def calcular_horas_trabajadas(self):
         """Calcula las horas trabajadas si hay entrada y salida"""
         if self.hora_entrada and self.hora_salida:
             entrada = datetime.combine(self.fecha, self.hora_entrada)
             salida = datetime.combine(self.fecha, self.hora_salida)
-            
+
             # Si la salida es antes que la entrada, asumir que es el día siguiente
             if salida < entrada:
                 salida += timedelta(days=1)
-            
+
             diferencia = salida - entrada
             self.horas_trabajadas = diferencia.total_seconds() / 3600
             return self.horas_trabajadas
         return 0
-    
+
     def verificar_retardo(self):
         """Verifica si el empleado llegó tarde según su horario"""
         if not self.hora_entrada:
             return False
-        
+
         # Obtener el horario del día
         dia_semana = self.fecha.isoweekday()
         try:
@@ -129,12 +132,12 @@ class RegistroAsistencia(models.Model):
             entrada_esperada = datetime.combine(self.fecha, horario.hora_entrada)
             entrada_real = datetime.combine(self.fecha, self.hora_entrada)
             tolerancia = timedelta(minutes=horario.tolerancia_minutos)
-            
+
             self.retardo = entrada_real > (entrada_esperada + tolerancia)
             return self.retardo
         except:
             return False
-    
+
     def save(self, *args, **kwargs):
         """Override save para calcular campos automáticamente"""
         if self.hora_entrada and self.hora_salida:
@@ -142,12 +145,12 @@ class RegistroAsistencia(models.Model):
         if self.hora_entrada:
             self.verificar_retardo()
         super().save(*args, **kwargs)
-    
+
     @property
     def esta_completo(self):
         """Verifica si el registro tiene entrada y salida"""
         return bool(self.hora_entrada and self.hora_salida)
-    
+
     @property
     def tiempo_trabajado_str(self):
         """Retorna las horas trabajadas en formato legible"""

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 import os
 
 # Función helper para obtener variables de entorno
@@ -151,8 +152,8 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / get_env('MEDIA_ROOT', default='media')
+MEDIA_URL = '/media/checador/'
+MEDIA_ROOT = BASE_DIR / get_env('MEDIA_ROOT', default='media/checador/')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -238,3 +239,79 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Configuración de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='SG.uZj2N8iCTn65ZDg8v4jg3g.CgNQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g')
+DEFAULT_FROM_EMAIL = 'Sistema de Checador <notificaciones@loginco.com.mx>'
+# === CONFIGURACIÓN DE DIGITALOCEAN SPACES ===
+# Configuración base
+AWS_ACCESS_KEY_ID = config('DO_SPACES_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY = config('DO_SPACES_SECRET_KEY')
+AWS_STORAGE_BUCKET_NAME = config('DO_SPACES_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = config('DO_SPACES_ENDPOINT_URL')  # ej: https://nyc3.digitaloceanspaces.com
+AWS_S3_REGION_NAME = config('DO_SPACES_REGION', default='nyc3')
+
+# Configuración adicional
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',  # Cache por 24 horas
+}
+
+# Configuración de permisos
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = False
+
+# Configuración de URLs personalizadas (opcional)
+AWS_S3_CUSTOM_DOMAIN = config('DO_SPACES_CDN_ENDPOINT', default=None)  # CDN opcional
+if AWS_S3_CUSTOM_DOMAIN:
+    AWS_S3_URL_PROTOCOL = 'https:'
+
+# === CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS ===
+# Backend de almacenamiento para archivos estáticos
+STATICFILES_STORAGE = 'storages.backends.s3boto3.StaticS3Boto3Storage'
+
+# Configuración específica para static files
+AWS_STATIC_LOCATION = 'static'
+#STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN or AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_STATIC_LOCATION}/'
+STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_STATIC_LOCATION}/'
+
+# === CONFIGURACIÓN DE ARCHIVOS MEDIA ===
+# Backend de almacenamiento para archivos media (fotos de tickets)
+DEFAULT_FILE_STORAGE = 'combustible.storage_backends.MediaStorage'  # Clase personalizada
+
+# Configuración específica para media files
+AWS_MEDIA_LOCATION = 'media/checador'
+#MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN or AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_MEDIA_LOCATION}/'
+MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_MEDIA_LOCATION}/'
+
+# === CONFIGURACIÓN DE SEGURIDAD ===
+# Headers de seguridad
+AWS_S3_OBJECT_PARAMETERS.update({
+    'ContentDisposition': 'inline',
+    'ContentLanguage': 'es',
+})
+
+# === CONFIGURACIÓN CONDICIONAL (DESARROLLO VS PRODUCCIÓN) ===
+if config('USE_SPACES', default=False, cast=bool):
+    # En producción usar Spaces
+    print("📦 Usando DigitalOcean Spaces para archivos")
+else:
+    # En desarrollo usar almacenamiento local
+    STATIC_URL = '/static/'
+    MEDIA_URL = '/media/checador/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media/checador/')
+    print("📁 Usando almacenamiento local para archivos")
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+# === CONFIGURACIÓN PARA REPORTES ===
+# Directorio específico para archivos temporales de reportes
+REPORTES_TEMP_DIR = 'reportes/temp'
+REPORTES_STORAGE_LOCATION = 'reportes'
