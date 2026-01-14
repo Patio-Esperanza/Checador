@@ -133,11 +133,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
 LANGUAGE_CODE = 'es-mx'
-
 TIME_ZONE = 'America/Mexico_City'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -293,14 +290,14 @@ if config('USE_SPACES', default=False, cast=bool):
 
     # Backend de almacenamiento para archivos estáticos
     STATICFILES_STORAGE = 'storages.backends.s3boto3.StaticS3Boto3Storage'
-    
+
     # Configuración específica para static files
     AWS_STATIC_LOCATION = 'static'
     STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_STATIC_LOCATION}/'
 
     # Backend de almacenamiento para archivos media
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    
+
     # Configuración específica para media files
     AWS_MEDIA_LOCATION = 'media/checador'
     MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{AWS_MEDIA_LOCATION}/'
