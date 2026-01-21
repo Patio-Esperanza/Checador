@@ -22,6 +22,15 @@ class Horario(models.Model):
         related_name='horarios',
         verbose_name='Empleado'
     )
+    turno = models.ForeignKey(
+        'turnos.Turno',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='horarios',
+        verbose_name='Turno',
+        help_text='Turno asignado (opcional)'
+    )
     dia_semana = models.IntegerField(
         choices=DIAS_SEMANA,
         verbose_name='Día de la Semana'

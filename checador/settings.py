@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'empleados',
     'horarios',
     'registros',
+    'turnos',
 ]
 
 MIDDLEWARE = [

@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/empleados/', include('empleados.urls')),
     path('api/horarios/', include('horarios.urls')),
     path('api/registros/', include('registros.urls')),
+    path('api/', include('turnos.urls')),
 ]
 
 # Servir archivos media en desarrollo
