@@ -184,7 +184,7 @@ if 'RENDER' in os.environ:
 
 # CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
-    'https://checador-loginco-app-zd3ie.ondigitalocean.app',
+    'https://checador-esperanza-app-r6yoc.ondigitalocean.app',
 ]
 
 # Add dynamically from environment if available
@@ -248,7 +248,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
-    'https://checador-loginco-app-zd3ie.ondigitalocean.app',
+    'https://checador-esperanza-app-r6yoc.ondigitalocean.app',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -260,7 +260,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'
 EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='SG.uZj2N8iCTn65ZDg8v4jg3g.CgNQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g')
-DEFAULT_FROM_EMAIL = 'Sistema de Checador <notificaciones@loginco.com.mx>'
+DEFAULT_FROM_EMAIL = 'Sistema de Checador <notificaciones@patiolaesperanza.com.mx>'
 # === CONFIGURACIÓN DE DIGITALOCEAN SPACES ===
 # Solo configurar si USE_SPACES está habilitado
 if config('USE_SPACES', default=False, cast=bool):
