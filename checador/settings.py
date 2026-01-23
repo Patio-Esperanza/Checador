@@ -102,13 +102,38 @@ WSGI_APPLICATION = 'checador.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Default database configuration (SQLite for development)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Configuración de base de datos desde variables individuales (.env)
+DB_ENGINE = config('DB_ENGINE', default='')
+if DB_ENGINE:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT', default='3306'),
+        }
     }
-}
+    # Opciones SSL para MySQL
+    if 'mysql' in DB_ENGINE:
+        DATABASES['default']['OPTIONS'] = {
+            'ssl': {'ssl-mode': 'REQUIRED'},
+            'charset': 'utf8mb4',
+        }
+    # Opciones SSL para PostgreSQL
+    elif 'postgresql' in DB_ENGINE:
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'require',
+        }
+else:
+    # Default: SQLite para desarrollo local
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -216,6 +241,33 @@ if 'DATABASE_URL' in os.environ:
     DATABASES = {
         'default': db_config
     }
+
+# Indicador de base de datos conectada
+def _get_db_info():
+    db = DATABASES['default']
+    engine = db.get('ENGINE', '')
+    if 'postgresql' in engine:
+        db_type = 'PostgreSQL'
+        icon = '🐘'
+    elif 'mysql' in engine:
+        db_type = 'MySQL'
+        icon = '🐬'
+    elif 'sqlite3' in engine:
+        db_type = 'SQLite'
+        icon = '📂'
+    else:
+        db_type = engine.split('.')[-1]
+        icon = '🗄️'
+
+    db_name = db.get('NAME', 'N/A')
+    if isinstance(db_name, Path):
+        db_name = db_name.name
+
+    db_host = db.get('HOST', 'localhost')
+    return icon, db_type, db_name, db_host
+
+_icon, _db_type, _db_name, _db_host = _get_db_info()
+print(f"{_icon} Base de datos: {_db_type} | Nombre: {_db_name} | Host: {_db_host}")
 
 # REST Framework
 REST_FRAMEWORK = {
