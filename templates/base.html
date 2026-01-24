@@ -39,6 +39,9 @@
                             <a href="{% url 'registros_lista' %}" class="text-white hover:text-gray-200 px-3 py-2 rounded-md">
                                 <i class="fas fa-list mr-1"></i>Registros
                             </a>
+                            <a href="{% url 'rol_mensual' %}" class="text-white hover:text-gray-200 px-3 py-2 rounded-md">
+                                <i class="fas fa-calendar-alt mr-1"></i>Rol Mensual
+                            </a>
                         {% endif %}
                         <span class="text-white">|</span>
                         <span class="text-white">{{ user.get_full_name|default:user.username }}</span>

@@ -39,7 +39,12 @@ urlpatterns = [
     
     # Marcar asistencia
     path('marcar-asistencia/', views.marcar_asistencia_view, name='marcar_asistencia'),
-    
+
+    # Rol mensual (asignación de turnos tipo Excel)
+    path('rol-mensual/', views.rol_mensual_view, name='rol_mensual'),
+    path('api/rol/guardar/', views.guardar_rol_view, name='guardar_rol'),
+    path('api/rol/eliminar/', views.eliminar_rol_view, name='eliminar_rol'),
+
     # Página principal - Reconocimiento Facial
     path('', facial_recognition_page, name='home'),
     path('facial/', facial_recognition_page, name='facial_recognition'),

@@ -215,18 +215,125 @@ class AsignacionTurno(models.Model):
         """Verifica si esta asignación aplica en una fecha específica"""
         if not self.activo:
             return False
-        
+
         # Verificar rango de fechas
         if fecha < self.fecha_inicio:
             return False
         if self.fecha_fin and fecha > self.fecha_fin:
             return False
-        
+
         # Verificar día de la semana (0=Lunes, 6=Domingo en Python)
         dia_semana = fecha.weekday()
         dias_map = [
             self.aplica_lunes, self.aplica_martes, self.aplica_miercoles,
             self.aplica_jueves, self.aplica_viernes, self.aplica_sabado, self.aplica_domingo
         ]
-        
+
         return dias_map[dia_semana]
+
+
+class RolMensual(models.Model):
+    """
+    Modelo para asignación diaria de turnos (tipo Excel/rol mensual).
+    Permite asignar un turno específico o marcar como descanso para cada día.
+    """
+
+    empleado = models.ForeignKey(
+        Empleado,
+        on_delete=models.CASCADE,
+        related_name='roles_mensuales',
+        verbose_name='Empleado'
+    )
+    fecha = models.DateField(verbose_name='Fecha')
+    turno = models.ForeignKey(
+        Turno,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roles_diarios',
+        verbose_name='Turno',
+        help_text='Dejar vacío para marcar como descanso'
+    )
+    es_descanso = models.BooleanField(
+        default=False,
+        verbose_name='Es Descanso'
+    )
+    notas = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Notas'
+    )
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roles_creados',
+        verbose_name='Creado por'
+    )
+
+    class Meta:
+        verbose_name = 'Rol Mensual'
+        verbose_name_plural = 'Roles Mensuales'
+        ordering = ['fecha', 'empleado']
+        unique_together = ['empleado', 'fecha']
+        indexes = [
+            models.Index(fields=['fecha']),
+            models.Index(fields=['empleado', 'fecha']),
+        ]
+
+    def __str__(self):
+        if self.es_descanso:
+            return f"{self.empleado.codigo_empleado} - {self.fecha} - Descanso"
+        elif self.turno:
+            return f"{self.empleado.codigo_empleado} - {self.fecha} - {self.turno.codigo}"
+        return f"{self.empleado.codigo_empleado} - {self.fecha} - Sin asignar"
+
+    def clean(self):
+        """Validación: si es descanso, no debe tener turno"""
+        if self.es_descanso and self.turno:
+            raise ValidationError('Un día de descanso no puede tener turno asignado.')
+
+    def save(self, *args, **kwargs):
+        # Si tiene turno, no es descanso
+        if self.turno:
+            self.es_descanso = False
+        super().save(*args, **kwargs)
+
+    @property
+    def estado(self):
+        """Retorna el estado de la asignación"""
+        if self.es_descanso:
+            return 'descanso'
+        elif self.turno:
+            return self.turno.codigo
+        return 'sin_asignar'
+
+    @classmethod
+    def obtener_rol_mes(cls, year, month):
+        """
+        Obtiene todas las asignaciones de un mes específico.
+        Retorna un diccionario {empleado_id: {dia: rol}}
+        """
+        from calendar import monthrange
+        from datetime import date
+
+        _, ultimo_dia = monthrange(year, month)
+        fecha_inicio = date(year, month, 1)
+        fecha_fin = date(year, month, ultimo_dia)
+
+        roles = cls.objects.filter(
+            fecha__gte=fecha_inicio,
+            fecha__lte=fecha_fin
+        ).select_related('empleado', 'turno')
+
+        resultado = {}
+        for rol in roles:
+            if rol.empleado_id not in resultado:
+                resultado[rol.empleado_id] = {}
+            resultado[rol.empleado_id][rol.fecha.day] = rol
+
+        return resultado

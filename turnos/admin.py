@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Turno, AsignacionTurno
+from .models import Turno, AsignacionTurno, RolMensual
 
 
 @admin.register(Turno)
@@ -66,3 +66,32 @@ class AsignacionTurnoAdmin(admin.ModelAdmin):
         else:
             return ', '.join([d[:3] for d in dias])
     get_dias_display.short_description = 'Días'
+
+
+@admin.register(RolMensual)
+class RolMensualAdmin(admin.ModelAdmin):
+    list_display = ['empleado', 'fecha', 'turno', 'es_descanso', 'creado_por', 'fecha_actualizacion']
+    list_filter = ['es_descanso', 'turno', 'fecha', 'empleado__departamento']
+    search_fields = [
+        'empleado__codigo_empleado',
+        'empleado__user__first_name',
+        'empleado__user__last_name',
+        'notas'
+    ]
+    ordering = ['-fecha', 'empleado__codigo_empleado']
+    date_hierarchy = 'fecha'
+    raw_id_fields = ['empleado']
+
+    fieldsets = (
+        ('Asignación', {
+            'fields': ('empleado', 'fecha', 'turno', 'es_descanso')
+        }),
+        ('Información Adicional', {
+            'fields': ('notas', 'creado_por')
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.creado_por = request.user
+        super().save_model(request, obj, form, change)

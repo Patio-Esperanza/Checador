@@ -5,9 +5,14 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.utils import timezone
-from datetime import datetime, timedelta
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from datetime import datetime, timedelta, date
+from calendar import monthrange
+import json
 from empleados.models import Empleado
 from registros.models import RegistroAsistencia
+from turnos.models import Turno, RolMensual
 
 
 def login_view(request):
@@ -246,3 +251,170 @@ def registros_lista_view(request):
 def marcar_asistencia_view(request):
     """Vista para marcar asistencia (redirige a facial recognition)"""
     return redirect('facial_recognition')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def rol_mensual_view(request):
+    """Vista para asignar turnos tipo Excel (rol mensual)"""
+    # Obtener mes y año de los parámetros o usar el actual
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+
+    # Validar rango de año
+    if year < 2020 or year > 2030:
+        year = timezone.now().year
+    if month < 1 or month > 12:
+        month = timezone.now().month
+
+    # Obtener información del mes
+    _, ultimo_dia = monthrange(year, month)
+    dias_mes = list(range(1, ultimo_dia + 1))
+
+    # Crear lista de fechas con información del día de la semana
+    dias_info = []
+    dias_semana_cortos = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+    for dia in dias_mes:
+        fecha = date(year, month, dia)
+        dias_info.append({
+            'dia': dia,
+            'dia_semana': dias_semana_cortos[fecha.weekday()],
+            'es_fin_semana': fecha.weekday() >= 5
+        })
+
+    # Obtener empleados activos
+    empleados = Empleado.objects.filter(activo=True).select_related('user').order_by('codigo_empleado')
+
+    # Obtener roles del mes
+    roles_mes = RolMensual.obtener_rol_mes(year, month)
+
+    # Obtener turnos disponibles
+    turnos = Turno.objects.filter(activo=True).order_by('codigo')
+
+    # Preparar datos para el template
+    empleados_data = []
+    for empleado in empleados:
+        roles_empleado = roles_mes.get(empleado.id, {})
+        dias_empleado = []
+        for dia in dias_mes:
+            rol = roles_empleado.get(dia)
+            if rol:
+                dias_empleado.append({
+                    'dia': dia,
+                    'turno_id': rol.turno_id if rol.turno else None,
+                    'turno_codigo': rol.turno.codigo if rol.turno else None,
+                    'turno_color': rol.turno.color if rol.turno else None,
+                    'es_descanso': rol.es_descanso,
+                    'notas': rol.notas
+                })
+            else:
+                dias_empleado.append({
+                    'dia': dia,
+                    'turno_id': None,
+                    'turno_codigo': None,
+                    'turno_color': None,
+                    'es_descanso': False,
+                    'notas': ''
+                })
+        empleados_data.append({
+            'empleado': empleado,
+            'dias': dias_empleado
+        })
+
+    # Nombres de meses en español
+    meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ]
+
+    context = {
+        'year': year,
+        'month': month,
+        'nombre_mes': meses[month - 1],
+        'dias_info': dias_info,
+        'empleados_data': empleados_data,
+        'turnos': turnos,
+        'meses': [(i + 1, meses[i]) for i in range(12)],
+        'years': list(range(2020, 2031)),
+    }
+
+    return render(request, 'turnos/rol_mensual.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+@require_POST
+def guardar_rol_view(request):
+    """API para guardar una asignación de rol"""
+    try:
+        data = json.loads(request.body)
+        empleado_id = data.get('empleado_id')
+        fecha_str = data.get('fecha')
+        turno_id = data.get('turno_id')
+        es_descanso = data.get('es_descanso', False)
+
+        # Validar datos
+        if not empleado_id or not fecha_str:
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'}, status=400)
+
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        empleado = Empleado.objects.get(id=empleado_id)
+
+        # Obtener turno si se especificó
+        turno = None
+        if turno_id and not es_descanso:
+            turno = Turno.objects.get(id=turno_id)
+
+        # Crear o actualizar el rol
+        rol, created = RolMensual.objects.update_or_create(
+            empleado=empleado,
+            fecha=fecha,
+            defaults={
+                'turno': turno,
+                'es_descanso': es_descanso,
+                'creado_por': request.user
+            }
+        )
+
+        return JsonResponse({
+            'success': True,
+            'created': created,
+            'turno_codigo': turno.codigo if turno else None,
+            'turno_color': turno.color if turno else None,
+            'es_descanso': es_descanso
+        })
+
+    except Empleado.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Empleado no encontrado'}, status=404)
+    except Turno.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Turno no encontrado'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+@require_POST
+def eliminar_rol_view(request):
+    """API para eliminar una asignación de rol"""
+    try:
+        data = json.loads(request.body)
+        empleado_id = data.get('empleado_id')
+        fecha_str = data.get('fecha')
+
+        if not empleado_id or not fecha_str:
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'}, status=400)
+
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+
+        deleted, _ = RolMensual.objects.filter(
+            empleado_id=empleado_id,
+            fecha=fecha
+        ).delete()
+
+        return JsonResponse({'success': True, 'deleted': deleted > 0})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

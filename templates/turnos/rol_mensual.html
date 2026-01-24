@@ -1,0 +1,448 @@
+{% extends 'base.html' %}
+
+{% block title %}Rol Mensual - {{ nombre_mes }} {{ year }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rol-grid {
+        overflow-x: auto;
+    }
+    .rol-table {
+        border-collapse: collapse;
+        font-size: 0.75rem;
+    }
+    .rol-table th, .rol-table td {
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        min-width: 36px;
+        height: 36px;
+    }
+    .rol-table th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .rol-table th.empleado-header {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+        min-width: 180px;
+        text-align: left;
+        padding-left: 8px;
+    }
+    .rol-table td.empleado-cell {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 5;
+        text-align: left;
+        padding-left: 8px;
+        font-weight: 500;
+        min-width: 180px;
+    }
+    .rol-table .fin-semana {
+        background-color: #fef3c7;
+    }
+    .dia-cell {
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+    }
+    .dia-cell:hover {
+        background-color: #dbeafe !important;
+        transform: scale(1.05);
+    }
+    .dia-cell.turno-a { background-color: #3B82F6; color: white; }
+    .dia-cell.turno-b { background-color: #10B981; color: white; }
+    .dia-cell.turno-c { background-color: #8B5CF6; color: white; }
+    .dia-cell.turno-fijo { background-color: #F59E0B; color: white; }
+    .dia-cell.descanso { background-color: #EF4444; color: white; }
+    .dia-cell.sin-asignar { background-color: #f9fafb; color: #9ca3af; }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Leyenda */
+    .leyenda-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 16px;
+        font-size: 0.875rem;
+    }
+    .leyenda-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <h1 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>
+                Rol Mensual
+            </h1>
+
+            <!-- Selector de mes/año -->
+            <form method="get" class="flex items-center gap-2">
+                <select name="month" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    {% for m_num, m_nombre in meses %}
+                        <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_nombre }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    {% for y in years %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    <i class="fas fa-search mr-1"></i> Ver
+                </button>
+            </form>
+
+            <!-- Navegación rápida -->
+            <div class="flex items-center gap-2">
+                {% with prev_month=month|add:"-1" prev_year=year %}
+                    {% if prev_month == 0 %}
+                        <a href="?month=12&year={{ year|add:'-1' }}" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    {% else %}
+                        <a href="?month={{ prev_month }}&year={{ year }}" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    {% endif %}
+                {% endwith %}
+                <span class="font-semibold text-lg">{{ nombre_mes }} {{ year }}</span>
+                {% with next_month=month|add:"1" %}
+                    {% if next_month == 13 %}
+                        <a href="?month=1&year={{ year|add:'1' }}" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% else %}
+                        <a href="?month={{ next_month }}&year={{ year }}" class="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="mt-4 flex flex-wrap gap-2">
+            {% for turno in turnos %}
+                <span class="leyenda-item">
+                    <span class="leyenda-color" style="background-color: {{ turno.color }};"></span>
+                    {{ turno.codigo }} - {{ turno.nombre }}
+                </span>
+            {% endfor %}
+            <span class="leyenda-item">
+                <span class="leyenda-color bg-red-500"></span>
+                D - Descanso
+            </span>
+            <span class="leyenda-item">
+                <span class="leyenda-color bg-gray-100 border border-gray-300"></span>
+                Sin asignar
+            </span>
+        </div>
+    </div>
+
+    <!-- Tabla/Grid -->
+    <div class="rol-grid p-4">
+        <table class="rol-table w-full">
+            <thead>
+                <tr>
+                    <th class="empleado-header">Empleado</th>
+                    {% for dia_info in dias_info %}
+                        <th class="{% if dia_info.es_fin_semana %}fin-semana{% endif %}">
+                            <div class="font-bold">{{ dia_info.dia }}</div>
+                            <div class="text-xs text-gray-500">{{ dia_info.dia_semana }}</div>
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp_data in empleados_data %}
+                    <tr>
+                        <td class="empleado-cell">
+                            <div class="font-medium">{{ emp_data.empleado.nombre_completo }}</div>
+                            <div class="text-xs text-gray-500">{{ emp_data.empleado.codigo_empleado }}</div>
+                        </td>
+                        {% for dia in emp_data.dias %}
+                            <td class="dia-cell {% if dia.es_descanso %}descanso{% elif dia.turno_codigo %}turno-{{ dia.turno_codigo|lower }}{% else %}sin-asignar{% endif %}"
+                                data-empleado-id="{{ emp_data.empleado.id }}"
+                                data-empleado-nombre="{{ emp_data.empleado.nombre_completo }}"
+                                data-dia="{{ dia.dia }}"
+                                data-fecha="{{ year }}-{{ month|stringformat:'02d' }}-{{ dia.dia|stringformat:'02d' }}"
+                                data-turno-id="{{ dia.turno_id|default:'' }}"
+                                data-es-descanso="{{ dia.es_descanso|yesno:'true,false' }}"
+                                {% if dia.turno_color %}style="background-color: {{ dia.turno_color }}; color: white;"{% endif %}
+                                onclick="abrirModal(this)">
+                                {% if dia.es_descanso %}
+                                    D
+                                {% elif dia.turno_codigo %}
+                                    {{ dia.turno_codigo }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{{ dias_info|length|add:1 }}" class="text-center py-8 text-gray-500">
+                            No hay empleados registrados
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para asignar turno -->
+<div id="modalAsignar" class="modal-overlay">
+    <div class="modal-content">
+        <h3 class="text-lg font-bold mb-4">
+            <i class="fas fa-edit text-blue-600 mr-2"></i>
+            Asignar Turno
+        </h3>
+        <p id="modalInfo" class="text-gray-600 mb-4"></p>
+
+        <div class="space-y-3">
+            {% for turno in turnos %}
+                <button type="button"
+                        class="w-full py-2 px-4 rounded-md text-white font-medium hover:opacity-90 transition"
+                        style="background-color: {{ turno.color }};"
+                        onclick="asignarTurno({{ turno.id }})">
+                    {{ turno.codigo }} - {{ turno.nombre }}
+                </button>
+            {% endfor %}
+            <button type="button"
+                    class="w-full py-2 px-4 rounded-md bg-red-500 text-white font-medium hover:bg-red-600 transition"
+                    onclick="asignarDescanso()">
+                <i class="fas fa-bed mr-2"></i>Descanso
+            </button>
+            <button type="button"
+                    class="w-full py-2 px-4 rounded-md bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition"
+                    onclick="eliminarAsignacion()">
+                <i class="fas fa-times mr-2"></i>Sin asignar
+            </button>
+        </div>
+
+        <div class="mt-4 pt-4 border-t">
+            <button type="button"
+                    class="w-full py-2 px-4 rounded-md border border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+                    onclick="cerrarModal()">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales para el modal
+    let celdaActual = null;
+
+    // Datos de turnos para actualizar UI
+    const turnosData = {
+        {% for turno in turnos %}
+            {{ turno.id }}: {
+                codigo: '{{ turno.codigo }}',
+                color: '{{ turno.color }}'
+            },
+        {% endfor %}
+    };
+
+    function abrirModal(celda) {
+        celdaActual = celda;
+        const empleadoNombre = celda.dataset.empleadoNombre;
+        const fecha = celda.dataset.fecha;
+
+        document.getElementById('modalInfo').textContent =
+            `${empleadoNombre} - ${formatearFecha(fecha)}`;
+        document.getElementById('modalAsignar').classList.add('active');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalAsignar').classList.remove('active');
+        celdaActual = null;
+    }
+
+    function formatearFecha(fechaStr) {
+        const fecha = new Date(fechaStr + 'T12:00:00');
+        return fecha.toLocaleDateString('es-MX', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+
+    async function asignarTurno(turnoId) {
+        if (!celdaActual) return;
+
+        const empleadoId = celdaActual.dataset.empleadoId;
+        const fecha = celdaActual.dataset.fecha;
+
+        try {
+            const response = await fetch('{% url "guardar_rol" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    empleado_id: empleadoId,
+                    fecha: fecha,
+                    turno_id: turnoId,
+                    es_descanso: false
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Actualizar celda visualmente
+                const turno = turnosData[turnoId];
+                celdaActual.textContent = turno.codigo;
+                celdaActual.style.backgroundColor = turno.color;
+                celdaActual.style.color = 'white';
+                celdaActual.className = 'dia-cell';
+                celdaActual.dataset.turnoId = turnoId;
+                celdaActual.dataset.esDescanso = 'false';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error de conexión: ' + error.message);
+        }
+
+        cerrarModal();
+    }
+
+    async function asignarDescanso() {
+        if (!celdaActual) return;
+
+        const empleadoId = celdaActual.dataset.empleadoId;
+        const fecha = celdaActual.dataset.fecha;
+
+        try {
+            const response = await fetch('{% url "guardar_rol" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    empleado_id: empleadoId,
+                    fecha: fecha,
+                    turno_id: null,
+                    es_descanso: true
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                celdaActual.textContent = 'D';
+                celdaActual.style.backgroundColor = '#EF4444';
+                celdaActual.style.color = 'white';
+                celdaActual.className = 'dia-cell descanso';
+                celdaActual.dataset.turnoId = '';
+                celdaActual.dataset.esDescanso = 'true';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error de conexión: ' + error.message);
+        }
+
+        cerrarModal();
+    }
+
+    async function eliminarAsignacion() {
+        if (!celdaActual) return;
+
+        const empleadoId = celdaActual.dataset.empleadoId;
+        const fecha = celdaActual.dataset.fecha;
+
+        try {
+            const response = await fetch('{% url "eliminar_rol" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    empleado_id: empleadoId,
+                    fecha: fecha
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                celdaActual.textContent = '-';
+                celdaActual.style.backgroundColor = '#f9fafb';
+                celdaActual.style.color = '#9ca3af';
+                celdaActual.className = 'dia-cell sin-asignar';
+                celdaActual.dataset.turnoId = '';
+                celdaActual.dataset.esDescanso = 'false';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error de conexión: ' + error.message);
+        }
+
+        cerrarModal();
+    }
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModal();
+        }
+    });
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('modalAsignar').addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarModal();
+        }
+    });
+</script>
+{% endblock %}
