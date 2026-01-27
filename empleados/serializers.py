@@ -22,7 +22,8 @@ class EmpleadoListSerializer(serializers.ModelSerializer):
         model = Empleado
         fields = (
             'id', 'codigo_empleado', 'user', 'nombre_completo',
-            'departamento', 'puesto', 'activo', 'tiene_rostro_registrado'
+            'departamento', 'puesto', 'activo', 'tiene_rostro_registrado',
+            'foto_rostro'
         )
 
 
