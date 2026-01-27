@@ -1,17 +1,63 @@
 from django.contrib import admin
+from django import forms
 from .models import Turno, AsignacionTurno, RolMensual
+
+
+class TurnoAdminForm(forms.ModelForm):
+    """Form personalizado para Turno con datalist para códigos sugeridos"""
+    
+    codigo_sugerido = forms.ChoiceField(
+        choices=[('', '--- Seleccionar o escribir uno nuevo ---')] + Turno.TIPO_TURNO,
+        required=False,
+        label='Códigos Sugeridos',
+        help_text='Seleccione un código predefinido o escriba uno personalizado abajo'
+    )
+    
+    class Meta:
+        model = Turno
+        fields = '__all__'
+        widgets = {
+            'codigo': forms.TextInput(attrs={
+                'placeholder': 'Ingrese código personalizado o use el selector de arriba',
+                'style': 'text-transform: uppercase;'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si estamos editando, pre-seleccionar el código si coincide con uno predefinido
+        if self.instance and self.instance.pk:
+            for codigo, _ in Turno.TIPO_TURNO:
+                if self.instance.codigo == codigo:
+                    self.fields['codigo_sugerido'].initial = codigo
+                    break
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        codigo_sugerido = cleaned_data.get('codigo_sugerido')
+        codigo = cleaned_data.get('codigo')
+        
+        # Si se seleccionó un código sugerido y no se escribió uno personalizado, usar el sugerido
+        if codigo_sugerido and not codigo:
+            cleaned_data['codigo'] = codigo_sugerido
+        # Si se escribió un código personalizado, convertirlo a mayúsculas
+        elif codigo:
+            cleaned_data['codigo'] = codigo.upper()
+        
+        return cleaned_data
 
 
 @admin.register(Turno)
 class TurnoAdmin(admin.ModelAdmin):
+    form = TurnoAdminForm
     list_display = ['codigo', 'nombre', 'hora_entrada', 'hora_salida', 'cruza_medianoche', 'activo']
-    list_filter = ['activo', 'codigo', 'cruza_medianoche']
+    list_filter = ['activo', 'cruza_medianoche']
     search_fields = ['nombre', 'codigo', 'descripcion']
     ordering = ['codigo']
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('nombre', 'codigo', 'descripcion', 'color')
+            'fields': ('nombre', 'codigo_sugerido', 'codigo', 'descripcion', 'color')
         }),
         ('Horario', {
             'fields': ('hora_entrada', 'hora_salida', 'cruza_medianoche')

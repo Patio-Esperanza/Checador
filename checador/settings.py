@@ -38,7 +38,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = get_env('SECRET_KEY', default='django-insecure-v$$9pkjnh6_zlez9xm7odj#$6uqy8s!@*b5-_f45_gw!+@i&7c')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = get_env('DEBUG', default='True', cast=bool)
+DEBUG = get_env('DEBUG', default='false', cast=bool)
 
 ALLOWED_HOSTS = get_env('ALLOWED_HOSTS', default='*', cast=list)
 
@@ -311,7 +311,7 @@ EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='SG.uZj2N8iCTn65ZDg8v4jg3g.CgNQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g7Dh_jQ65g')
+EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='SG')
 DEFAULT_FROM_EMAIL = 'Sistema de Checador <notificaciones@patiolaesperanza.com.mx>'
 # === CONFIGURACIÓN DE DIGITALOCEAN SPACES ===
 # Solo configurar si USE_SPACES está habilitado
