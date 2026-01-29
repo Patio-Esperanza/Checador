@@ -19,12 +19,11 @@ def enviar_reporte_semanal_job():
     """
     print(f"[{timezone.now()}] Ejecutando job de reporte semanal...")
     
-    # Calcular periodo (semana anterior: lunes a domingo)
+    # Calcular periodo (semana actual: lunes hasta hoy)
     hoy = timezone.now().date()
     dias_desde_lunes = hoy.weekday()  # 0=Lunes, 6=Domingo
-    lunes_esta_semana = hoy - timedelta(days=dias_desde_lunes)
-    fecha_fin = lunes_esta_semana - timedelta(days=1)  # Domingo semana pasada
-    fecha_inicio = fecha_fin - timedelta(days=6)  # Lunes semana pasada
+    fecha_inicio = hoy - timedelta(days=dias_desde_lunes)  # Lunes de esta semana
+    fecha_fin = hoy  # Hasta hoy
     
     # Enviar reporte
     email_service = EmailReportService(fecha_inicio, fecha_fin)

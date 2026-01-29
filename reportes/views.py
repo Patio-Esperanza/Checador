@@ -91,12 +91,11 @@ class HistorialReporteViewSet(viewsets.ReadOnlyModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         else:
-            # Por defecto: semana anterior (lunes a domingo)
+            # Por defecto: semana actual (lunes de esta semana hasta hoy)
             hoy = timezone.now().date()
             dias_desde_lunes = hoy.weekday()  # 0=Lunes, 6=Domingo
-            lunes_esta_semana = hoy - timedelta(days=dias_desde_lunes)
-            fecha_fin = lunes_esta_semana - timedelta(days=1)  # Domingo semana pasada
-            fecha_inicio = fecha_fin - timedelta(days=6)  # Lunes semana pasada
+            fecha_inicio = hoy - timedelta(days=dias_desde_lunes)  # Lunes de esta semana
+            fecha_fin = hoy  # Hasta hoy
         
         # Validar que fecha_inicio < fecha_fin
         if fecha_inicio > fecha_fin:

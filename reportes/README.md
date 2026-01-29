@@ -111,7 +111,7 @@ python manage.py enviar_reporte_semanal --fecha-inicio=2026-01-20 --fecha-fin=20
 #### Desde la API:
 
 ```bash
-# Reporte de la semana pasada
+# Reporte de la semana actual (Lunes hasta hoy)
 POST /api/reportes/historial/enviar_reporte_manual/
 {}
 

@@ -35,13 +35,12 @@ class Command(BaseCommand):
                 )
                 return
         else:
-            # Por defecto: semana anterior (lunes a domingo)
+            # Por defecto: semana actual (lunes de esta semana hasta hoy)
             hoy = timezone.now().date()
-            # Calcular el lunes de la semana pasada
+            # Calcular el lunes de la semana actual
             dias_desde_lunes = hoy.weekday()  # 0=Lunes, 6=Domingo
-            lunes_esta_semana = hoy - timedelta(days=dias_desde_lunes)
-            fecha_fin = lunes_esta_semana - timedelta(days=1)  # Domingo semana pasada
-            fecha_inicio = fecha_fin - timedelta(days=6)  # Lunes semana pasada
+            fecha_inicio = hoy - timedelta(days=dias_desde_lunes)  # Lunes de esta semana
+            fecha_fin = hoy  # Hasta hoy
 
         self.stdout.write(
             self.style.WARNING(f'Generando reporte del {fecha_inicio} al {fecha_fin}...')
