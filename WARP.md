@@ -26,9 +26,11 @@ python manage.py createsuperuser
 ```
 
 ### Configuration
-- Copy `.env.example` to `.env` and configure
+- Copy `.env.example` to `.env` and configure: `cp .env.example .env`
+- **IMPORTANT**: `SECRET_KEY` is required in `.env` - the app will not start without it
 - Default: SQLite (for development)
-- Production: Uncomment PostgreSQL config in `checador/settings.py` (lines 106-111)
+- Production: Set `DB_ENGINE` and related variables in `.env` for MySQL/PostgreSQL
+- See `SECURITY.md` for complete list of environment variables
 
 ## Common Commands
 

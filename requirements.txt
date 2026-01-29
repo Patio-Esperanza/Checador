@@ -36,6 +36,7 @@ tifffile==2025.12.20
 openpyxl==3.1.5
 reportlab==4.4.7
 click==8.3.1
+django-apscheduler==0.7.0
 charset-normalizer==3.4.4
 et_xmlfile==2.0.0
 

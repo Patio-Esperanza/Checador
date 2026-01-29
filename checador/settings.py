@@ -12,20 +12,23 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-from decouple import config
+from decouple import config, Csv
 import os
 
-# Función helper para obtener variables de entorno
+# Función helper para obtener variables de entorno con python-decouple
 def get_env(key, default=None, cast=None):
-    value = os.environ.get(key, default)
-    if cast and value is not None:
-        if cast == bool:
-            return value.lower() in ['true', '1', 'yes']
-        elif cast == list:
-            return [item.strip() for item in value.split(',')]
-        else:
-            return cast(value)
-    return value
+    """Obtiene variables de entorno con soporte para .env y tipos personalizados"""
+    if cast == list:
+        # Usar Csv de decouple para listas
+        return config(key, default=default or '', cast=Csv())
+    elif cast == bool:
+        return config(key, default=default, cast=bool)
+    elif cast == int:
+        return config(key, default=default, cast=int)
+    elif cast:
+        return config(key, default=default, cast=cast)
+    else:
+        return config(key, default=default)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,7 +38,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = get_env('SECRET_KEY', default='django-insecure-v$$9pkjnh6_zlez9xm7odj#$6uqy8s!@*b5-_f45_gw!+@i&7c')
+try:
+    SECRET_KEY = config('SECRET_KEY')
+except Exception:
+    raise ValueError('SECRET_KEY must be set in .env file or environment variables')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_env('DEBUG', default='false', cast=bool)
@@ -57,12 +63,14 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'django_apscheduler',
     # apps
     'authentication',
     'empleados',
     'horarios',
     'registros',
     'turnos',
+    'reportes',
 ]
 
 MIDDLEWARE = [
@@ -207,10 +215,9 @@ if 'DIGITALOCEAN_APP_DOMAIN' in os.environ:
 if 'RENDER' in os.environ:
     ALLOWED_HOSTS.append(os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''))
 
-# CSRF Trusted Origins
-CSRF_TRUSTED_ORIGINS = [
-    'https://checador-esperanza-app-r6yoc.ondigitalocean.app',
-]
+# CSRF Trusted Origins - desde variable de entorno
+CSRF_TRUSTED_ORIGINS_ENV = get_env('CSRF_TRUSTED_ORIGINS', default='', cast=list)
+CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS_ENV if origin]
 
 # Add dynamically from environment if available
 if 'DIGITALOCEAN_APP_DOMAIN' in os.environ:
@@ -294,25 +301,22 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'https://checador-esperanza-app-r6yoc.ondigitalocean.app',
-]
+# CORS Settings - desde variable de entorno
+CORS_ALLOWED_ORIGINS_ENV = get_env('CORS_ALLOWED_ORIGINS', 
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080', 
+    cast=list)
+CORS_ALLOWED_ORIGINS = [origin for origin in CORS_ALLOWED_ORIGINS_ENV if origin]
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Configuración de Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='SG')
-DEFAULT_FROM_EMAIL = 'Sistema de Checador <notificaciones@patiolaesperanza.com.mx>'
+EMAIL_BACKEND = get_env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = get_env('EMAIL_HOST', default='smtp.sendgrid.net')
+EMAIL_PORT = get_env('EMAIL_PORT', default='587', cast=int)
+EMAIL_USE_TLS = get_env('EMAIL_USE_TLS', default='True', cast=bool)
+EMAIL_HOST_USER = get_env('EMAIL_HOST_USER', default='apikey')
+EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = get_env('DEFAULT_FROM_EMAIL', default='Sistema de Checador <notificaciones@patiolaesperanza.com.mx>')
 # === CONFIGURACIÓN DE DIGITALOCEAN SPACES ===
 # Solo configurar si USE_SPACES está habilitado
 if config('USE_SPACES', default=False, cast=bool):
