@@ -38,11 +38,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-try:
-    SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY')
+""" try:
 except Exception:
     raise ValueError('SECRET_KEY must be set in .env file or environment variables')
-
+ """
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_env('DEBUG', default='false', cast=bool)
 
@@ -302,8 +302,8 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings - desde variable de entorno
-CORS_ALLOWED_ORIGINS_ENV = get_env('CORS_ALLOWED_ORIGINS', 
-    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080', 
+CORS_ALLOWED_ORIGINS_ENV = get_env('CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080',
     cast=list)
 CORS_ALLOWED_ORIGINS = [origin for origin in CORS_ALLOWED_ORIGINS_ENV if origin]
 
