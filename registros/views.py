@@ -2,8 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db import models
 from django.utils import timezone
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from .models import RegistroAsistencia
 
@@ -102,20 +103,46 @@ class RegistroAsistenciaViewSet(viewsets.ModelViewSet):
         # Obtener o crear registro del día (usando hora de México)
         ahora_mexico = timezone.now().astimezone(MEXICO_TZ)
         hoy = ahora_mexico.date()
-        registro, created = RegistroAsistencia.objects.get_or_create(
-            empleado=empleado,
-            fecha=hoy,
-            defaults={
-                'reconocimiento_facial': True,
-                'confianza_reconocimiento': confianza,
-                'latitud': latitud,
-                'longitud': longitud,
-                'ubicacion': ubicacion
-            }
-        )
-        
-        # Actualizar según el tipo (hora de México)
+        ayer = hoy - timedelta(days=1)
         ahora = ahora_mexico.time()
+
+        # Para salidas, verificar si hay un registro pendiente del día anterior
+        # (turno nocturno: entrada 23:00 ayer, salida 07:00 hoy)
+        registro = None
+        fecha_registro = hoy
+
+        if tipo == 'salida':
+            # Buscar registro de ayer sin salida (posible turno nocturno)
+            try:
+                registro_ayer = RegistroAsistencia.objects.get(
+                    empleado=empleado,
+                    fecha=ayer,
+                    hora_entrada__isnull=False,
+                    hora_salida__isnull=True
+                )
+                # Verificar si el empleado tiene turno nocturno
+                turno_nocturno = self._es_turno_nocturno(empleado, ayer)
+                if turno_nocturno:
+                    registro = registro_ayer
+                    fecha_registro = ayer
+            except RegistroAsistencia.DoesNotExist:
+                pass
+
+        # Si no encontramos registro de turno nocturno, usar el día actual
+        if registro is None:
+            registro, created = RegistroAsistencia.objects.get_or_create(
+                empleado=empleado,
+                fecha=hoy,
+                defaults={
+                    'reconocimiento_facial': True,
+                    'confianza_reconocimiento': confianza,
+                    'latitud': latitud,
+                    'longitud': longitud,
+                    'ubicacion': ubicacion
+                }
+            )
+        
+        # Actualizar según el tipo
         if tipo == 'entrada':
             if registro.hora_entrada:
                 return Response({
@@ -151,3 +178,53 @@ class RegistroAsistenciaViewSet(viewsets.ModelViewSet):
             'hora': ahora.strftime('%H:%M:%S'),
             'registro': RegistroAsistenciaSerializer(registro).data
         }, status=status.HTTP_200_OK)
+
+    def _es_turno_nocturno(self, empleado, fecha):
+        """
+        Verifica si el empleado tiene un turno nocturno para la fecha dada.
+        Busca en: RolMensual, Horario con turno, AsignacionTurno
+        """
+        from turnos.models import RolMensual, AsignacionTurno
+
+        # 1. Buscar en RolMensual (mayor prioridad)
+        try:
+            rol = RolMensual.objects.select_related('turno').get(
+                empleado=empleado,
+                fecha=fecha,
+                es_descanso=False,
+                turno__isnull=False
+            )
+            if rol.turno and rol.turno.cruza_medianoche:
+                return True
+        except RolMensual.DoesNotExist:
+            pass
+
+        # 2. Buscar en Horario del día de la semana
+        dia_semana = fecha.isoweekday()  # 1=Lunes, 7=Domingo
+        try:
+            horario = empleado.horarios.select_related('turno').get(
+                dia_semana=dia_semana,
+                activo=True
+            )
+            if horario.turno and horario.turno.cruza_medianoche:
+                return True
+            # Si no tiene turno pero las horas indican turno nocturno
+            if horario.hora_salida < horario.hora_entrada:
+                return True
+        except:
+            pass
+
+        # 3. Buscar en AsignacionTurno
+        asignaciones = AsignacionTurno.objects.filter(
+            empleado=empleado,
+            activo=True,
+            fecha_inicio__lte=fecha
+        ).filter(
+            models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gte=fecha)
+        ).select_related('turno')
+
+        for asignacion in asignaciones:
+            if asignacion.aplica_en_fecha(fecha) and asignacion.turno.cruza_medianoche:
+                return True
+
+        return False

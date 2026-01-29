@@ -134,18 +134,79 @@ class RegistroAsistencia(models.Model):
         if not self.hora_entrada:
             return False
 
-        # Obtener el horario del día
-        dia_semana = self.fecha.isoweekday()
-        try:
-            horario = self.empleado.horarios.get(dia_semana=dia_semana, activo=True)
-            entrada_esperada = datetime.combine(self.fecha, horario.hora_entrada)
-            entrada_real = datetime.combine(self.fecha, self.hora_entrada)
-            tolerancia = timedelta(minutes=horario.tolerancia_minutos)
-
-            self.retardo = entrada_real > (entrada_esperada + tolerancia)
-            return self.retardo
-        except:
+        # Obtener el horario/turno del empleado para este día
+        turno_info = self._obtener_turno_del_dia()
+        if not turno_info:
             return False
+
+        hora_entrada_esperada, tolerancia_minutos, cruza_medianoche = turno_info
+
+        entrada_esperada = datetime.combine(self.fecha, hora_entrada_esperada)
+        entrada_real = datetime.combine(self.fecha, self.hora_entrada)
+        tolerancia = timedelta(minutes=tolerancia_minutos)
+
+        # Para turnos nocturnos, la entrada puede ser en la noche (ej: 23:00)
+        # Si la hora de entrada real es temprano en la mañana, puede ser del día anterior
+        if cruza_medianoche:
+            # Si la entrada esperada es de noche (>18:00) y la real es de día (<12:00)
+            # significa que no marcó entrada ayer, no es retardo normal
+            if hora_entrada_esperada.hour >= 18 and self.hora_entrada.hour < 12:
+                # Entrada fuera de horario, pero no calculamos retardo aquí
+                self.retardo = False
+                return False
+
+        self.retardo = entrada_real > (entrada_esperada + tolerancia)
+        return self.retardo
+
+    def _obtener_turno_del_dia(self):
+        """
+        Obtiene la información del turno para este día.
+        Retorna: (hora_entrada, tolerancia_minutos, cruza_medianoche) o None
+        Prioridad: RolMensual > Horario > AsignacionTurno
+        """
+        from turnos.models import RolMensual, AsignacionTurno
+
+        dia_semana = self.fecha.isoweekday()
+
+        # 1. Buscar en RolMensual
+        try:
+            rol = RolMensual.objects.select_related('turno').get(
+                empleado=self.empleado,
+                fecha=self.fecha,
+                es_descanso=False,
+                turno__isnull=False
+            )
+            if rol.turno:
+                return (rol.turno.hora_entrada, 10, rol.turno.cruza_medianoche)
+        except RolMensual.DoesNotExist:
+            pass
+
+        # 2. Buscar en Horario del día
+        try:
+            horario = self.empleado.horarios.select_related('turno').get(
+                dia_semana=dia_semana,
+                activo=True
+            )
+            cruza = horario.turno.cruza_medianoche if horario.turno else (horario.hora_salida < horario.hora_entrada)
+            return (horario.hora_entrada, horario.tolerancia_minutos, cruza)
+        except:
+            pass
+
+        # 3. Buscar en AsignacionTurno
+        from django.db.models import Q
+        asignaciones = AsignacionTurno.objects.filter(
+            empleado=self.empleado,
+            activo=True,
+            fecha_inicio__lte=self.fecha
+        ).filter(
+            Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=self.fecha)
+        ).select_related('turno')
+
+        for asignacion in asignaciones:
+            if asignacion.aplica_en_fecha(self.fecha):
+                return (asignacion.turno.hora_entrada, 10, asignacion.turno.cruza_medianoche)
+
+        return None
 
     def save(self, *args, **kwargs):
         """Override save para calcular campos automáticamente"""

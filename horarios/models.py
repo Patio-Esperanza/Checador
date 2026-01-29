@@ -63,8 +63,25 @@ class Horario(models.Model):
     
     def clean(self):
         """Validación personalizada"""
+        # Si tiene turno asignado, usar la configuración del turno
+        if self.turno_id:
+            # El turno ya maneja cruza_medianoche, no validar horas aquí
+            return
+
+        # Si no tiene turno, validar que las horas sean coherentes
+        # (solo para horarios sin turno asignado)
         if self.hora_salida <= self.hora_entrada:
-            raise ValidationError('La hora de salida debe ser posterior a la hora de entrada.')
+            raise ValidationError(
+                'La hora de salida debe ser posterior a la hora de entrada. '
+                'Para turnos nocturnos, asigne un Turno que cruce medianoche.'
+            )
+
+    @property
+    def cruza_medianoche(self):
+        """Indica si el horario cruza medianoche (turno nocturno)"""
+        if self.turno_id and self.turno:
+            return self.turno.cruza_medianoche
+        return self.hora_salida < self.hora_entrada
     
     @property
     def horas_dia(self):
@@ -72,5 +89,10 @@ class Horario(models.Model):
         from datetime import datetime, timedelta
         entrada = datetime.combine(datetime.today(), self.hora_entrada)
         salida = datetime.combine(datetime.today(), self.hora_salida)
+
+        # Si cruza medianoche, sumar un día a la salida
+        if self.cruza_medianoche:
+            salida += timedelta(days=1)
+
         diferencia = salida - entrada
         return diferencia.total_seconds() / 3600
