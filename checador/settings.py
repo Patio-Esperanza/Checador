@@ -38,11 +38,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = get_env('SECRET_KEY', default='')
-""" try:
-except Exception:
-    raise ValueError('SECRET_KEY must be set in .env file or environment variables')
- """
+# Durante el build de DigitalOcean, SECRET_KEY no está disponible,
+# pero se usa un valor temporal. En runtime, se requiere el real.
+SECRET_KEY = get_env('SECRET_KEY', default='build-time-secret-key-change-in-production')
+
+if not DEBUG and SECRET_KEY == 'build-time-secret-key-change-in-production':
+    # Solo advertir en producción si aún usa el valor por defecto
+    import sys
+    if 'collectstatic' not in sys.argv:
+        raise ValueError('SECRET_KEY must be set in environment variables for production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_env('DEBUG', default='false', cast=bool)
 
