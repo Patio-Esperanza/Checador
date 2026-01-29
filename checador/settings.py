@@ -42,13 +42,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # pero se usa un valor temporal. En runtime, se requiere el real.
 SECRET_KEY = get_env('SECRET_KEY', default='build-time-secret-key-change-in-production')
 
+DEBUG = get_env('DEBUG', default='false', cast=bool)
 if not DEBUG and SECRET_KEY == 'build-time-secret-key-change-in-production':
     # Solo advertir en producción si aún usa el valor por defecto
     import sys
     if 'collectstatic' not in sys.argv:
         raise ValueError('SECRET_KEY must be set in environment variables for production')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = get_env('DEBUG', default='false', cast=bool)
 
 ALLOWED_HOSTS = get_env('ALLOWED_HOSTS', default='*', cast=list)
 
