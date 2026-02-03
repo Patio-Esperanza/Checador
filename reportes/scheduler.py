@@ -13,22 +13,23 @@ from reportes.models import ConfiguracionReporte
 from reportes.services.email_service import EmailReportService
 
 
+@util.close_old_connections
 def enviar_reporte_semanal_job():
     """
     Job que se ejecuta semanalmente para enviar el reporte
     """
     print(f"[{timezone.now()}] Ejecutando job de reporte semanal...")
-    
+
     # Calcular periodo (semana actual: lunes hasta hoy)
     hoy = timezone.now().date()
     dias_desde_lunes = hoy.weekday()  # 0=Lunes, 6=Domingo
     fecha_inicio = hoy - timedelta(days=dias_desde_lunes)  # Lunes de esta semana
     fecha_fin = hoy  # Hasta hoy
-    
+
     # Enviar reporte
     email_service = EmailReportService(fecha_inicio, fecha_fin)
     resultado = email_service.enviar_reporte_semanal()
-    
+
     if resultado['success']:
         print(f"✓ {resultado['message']}")
     else:

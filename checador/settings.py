@@ -125,6 +125,8 @@ if DB_ENGINE:
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST'),
             'PORT': config('DB_PORT', default='3306'),
+            'CONN_MAX_AGE': 600,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
     # Opciones SSL para MySQL

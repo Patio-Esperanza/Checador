@@ -240,7 +240,9 @@ Patio La Esperanza
 
     def _registrar_historial(self, destinatarios, estado, num_empleados, mensaje_error=''):
         """Registra el envío en el historial"""
+        from django.db import close_old_connections
         try:
+            close_old_connections()
             HistorialReporte.objects.create(
                 fecha_inicio=self.fecha_inicio,
                 fecha_fin=self.fecha_fin,
