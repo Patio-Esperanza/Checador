@@ -42,8 +42,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # pero se usa un valor temporal. En runtime, se requiere el real.
 SECRET_KEY = get_env('SECRET_KEY', default='build-time-secret-key-change-in-production')
 
-# TEMPORAL: Forzar DEBUG=True para ver errores (cambiar a False después)
-DEBUG = True  # get_env('DEBUG', default='false', cast=bool)
+DEBUG = get_env('DEBUG', default='false', cast=bool)
 if not DEBUG and SECRET_KEY == 'build-time-secret-key-change-in-production':
     # Solo advertir en producción si aún usa el valor por defecto
     import sys
