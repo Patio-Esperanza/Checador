@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm
 
 # Force rebuild - update this value to trigger new build
-ARG BUILD_VERSION=20260217-v1
+ARG BUILD_VERSION=20260217-v2
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -34,14 +34,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip, setuptools, and wheel
-RUN pip install --upgrade pip setuptools wheel
+# Upgrade pip and install setuptools FIRST (required for pkg_resources)
+RUN pip install --no-cache-dir --upgrade pip setuptools>=70.0.0 wheel
 
 # Copy requirements file
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies (setuptools must be installed before face_recognition)
+RUN pip install --no-cache-dir setuptools>=70.0.0 && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .
