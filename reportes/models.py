@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import EmailValidator
+from datetime import time
 
 
 class ConfiguracionReporte(models.Model):
@@ -27,7 +28,7 @@ class ConfiguracionReporte(models.Model):
         help_text='Día de la semana para enviar el reporte (1=Lunes, 7=Domingo)'
     )
     hora_envio = models.TimeField(
-        default='08:00:00',
+        default=time(8, 0, 0),
         verbose_name='Hora de Envío',
         help_text='Hora del día para enviar el reporte'
     )

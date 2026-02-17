@@ -68,8 +68,16 @@ def start_scheduler():
             # APScheduler usa: 0=Lunes, 1=Martes, ..., 6=Domingo
             day_of_week = config.dia_envio - 1 if config.dia_envio > 0 else 0
             
-            hora = config.hora_envio.hour
-            minuto = config.hora_envio.minute
+            # Manejar hora_envio como string o time object
+            hora_envio = config.hora_envio
+            if isinstance(hora_envio, str):
+                # Parsear string "HH:MM:SS" a componentes
+                partes = hora_envio.split(':')
+                hora = int(partes[0])
+                minuto = int(partes[1]) if len(partes) > 1 else 0
+            else:
+                hora = hora_envio.hour
+                minuto = hora_envio.minute
             
             scheduler.add_job(
                 enviar_reporte_semanal_job,
