@@ -234,7 +234,9 @@ if 'DIGITALOCEAN_APP_DOMAIN' in os.environ:
         CSRF_TRUSTED_ORIGINS.append(domain)
 
 # Database configuration from DATABASE_URL (for production)
-if 'DATABASE_URL' in os.environ:
+# Only use DATABASE_URL if it has a valid value (not empty and has a proper scheme)
+_database_url = os.environ.get('DATABASE_URL', '')
+if _database_url and '://' in _database_url and not _database_url.startswith('://'):
     import dj_database_url
     db_config = dj_database_url.config(
         conn_max_age=600,
