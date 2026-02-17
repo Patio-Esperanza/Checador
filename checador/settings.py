@@ -205,7 +205,11 @@ LOGOUT_REDIRECT_URL = 'login'
 
 # Production Security Settings
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Confiar en el header X-Forwarded-Proto del proxy (DigitalOcean App Platform)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Solo habilitar SSL redirect si NO estamos detrás de un proxy que ya lo maneja
+    # DigitalOcean App Platform ya maneja SSL, así que deshabilitamos esto
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
