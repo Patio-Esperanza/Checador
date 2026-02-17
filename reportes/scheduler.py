@@ -2,11 +2,11 @@
 Configuración del scheduler para reportes automáticos
 """
 from datetime import datetime, timedelta
-from django.db import close_old_connections
+#from django.db import close_old_connections
 from django.utils import timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+#from apscheduler.triggers.interval import IntervalTrigger
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 from django_apscheduler import util
@@ -15,13 +15,13 @@ from reportes.models import ConfiguracionReporte
 from reportes.services.email_service import EmailReportService
 
 
-@util.close_old_connections
+""" @util.close_old_connections
 def db_keepalive_job():
-    """
+    
     Job que mantiene la conexión a la base de datos activa
     para evitar desconexiones por inactividad (wait_timeout).
-    """
-    close_old_connections()
+    
+    close_old_connections() """
 
 
 @util.close_old_connections
@@ -106,14 +106,14 @@ def start_scheduler():
         return None
     
     # Job keepalive para evitar desconexiones de MySQL por inactividad
-    scheduler.add_job(
+"""     scheduler.add_job(
         db_keepalive_job,
         trigger=IntervalTrigger(minutes=5),
         id="db_keepalive",
         max_instances=1,
         replace_existing=True,
         name="Mantener conexión DB activa"
-    )
+    ) """
 
     # Job para limpiar ejecuciones antiguas (diario a las 00:00)
     scheduler.add_job(
