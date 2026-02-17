@@ -1,6 +1,7 @@
 # Core Django
 Django==6.0
-setuptools>=70.0.0
+# Fijar setuptools <81 para mantener pkg_resources (requerido por face_recognition)
+setuptools>=70.0.0,<81
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
