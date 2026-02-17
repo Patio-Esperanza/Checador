@@ -1,5 +1,8 @@
 FROM python:3.12-slim-bookworm
 
+# Force rebuild - update this value to trigger new build
+ARG BUILD_VERSION=20260217-v1
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
