@@ -7,12 +7,23 @@
     <title>Reconocimiento Facial - Sistema de Asistencias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         #video {
             transform: scaleX(-1);
             border-radius: 1rem;
+            display: block;
+            width: 100%;
         }
-        #canvas {
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scaleX(-1);
+            border-radius: 1rem;
+            pointer-events: none;
+        }
+        #captureCanvas {
             display: none;
         }
         .loader {
@@ -27,6 +38,7 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -46,41 +58,47 @@
                 <!-- Video Section -->
                 <div class="bg-gray-900 p-6 flex flex-col items-center justify-center">
                     <div class="w-full max-w-md">
-                        <div class="mb-4 text-center">
+                        <!-- Camera Status -->
+                        <div class="mb-3 text-center">
                             <span id="cameraStatus" class="text-white text-sm">
-                                <i class="fas fa-circle text-red-500 animate-pulse"></i>
-                                Cámara desactivada
+                                <i class="fas fa-circle text-yellow-400 animate-pulse"></i>
+                                Iniciando cámara...
                             </span>
                         </div>
-                        
-                        <!-- Video Preview -->
-                        <div class="relative">
-                            <video id="video" autoplay playsinline class="w-full bg-black"></video>
-                            <div id="videoPlaceholder" class="w-full aspect-video bg-gray-800 rounded-2xl flex items-center justify-center">
+
+                        <!-- Video + Overlay Canvas -->
+                        <div class="relative" id="videoContainer">
+                            <video id="video" autoplay playsinline muted></video>
+                            <canvas id="overlayCanvas"></canvas>
+                            <div id="videoPlaceholder" class="w-full aspect-video bg-gray-800 rounded-2xl flex items-center justify-center hidden">
                                 <div class="text-center text-gray-400">
                                     <i class="fas fa-video-slash text-6xl mb-4"></i>
-                                    <p>Activa la cámara para comenzar</p>
+                                    <p>Cámara no disponible</p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <canvas id="canvas"></canvas>
-                        
+
+                        <canvas id="captureCanvas"></canvas>
+
+                        <!-- Face Warning -->
+                        <div id="faceWarning" class="mt-3 text-center text-sm font-medium opacity-0" style="transition: opacity 0.3s ease, color 0.3s ease;">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            Centra o acerca tu rostro
+                        </div>
+
                         <!-- Camera Controls -->
-                        <div class="mt-4 space-y-2">
-                            <div class="flex gap-2">
-                                <button id="startCamera" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition">
-                                    <i class="fas fa-video mr-2"></i>
-                                    Activar Cámara
-                                </button>
-                                <button id="stopCamera" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition hidden">
-                                    <i class="fas fa-video-slash mr-2"></i>
-                                    Detener
-                                </button>
-                            </div>
-                            <button id="switchCamera" class="hidden w-full bg-gray-700 hover:bg-gray-800 text-white px-4 py-3 rounded-lg font-semibold transition">
+                        <div class="mt-3 space-y-2">
+                            <button id="stopCamera" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition">
+                                <i class="fas fa-video-slash mr-2"></i>
+                                Detener
+                            </button>
+                            <button id="switchCamera" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition">
                                 <i class="fas fa-sync-alt mr-2"></i>
                                 Cambiar Cámara
+                            </button>
+                            <button id="startCamera" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition hidden">
+                                <i class="fas fa-video mr-2"></i>
+                                Activar Cámara
                             </button>
                         </div>
                     </div>
@@ -89,15 +107,15 @@
                 <!-- Actions Section -->
                 <div class="p-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-6">Marcar Asistencia</h2>
-                    
+
                     <!-- Action Buttons -->
                     <div class="space-y-4 mb-6">
-                        <button id="btnEntrada" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
+                        <button id="btnEntrada" disabled class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
                             <i class="fas fa-arrow-right mr-2"></i>
                             Marcar Entrada
                         </button>
-                        
-                        <button id="btnSalida" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
+
+                        <button id="btnSalida" disabled class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
                             <i class="fas fa-arrow-left mr-2"></i>
                             Marcar Salida
                         </button>
@@ -150,10 +168,11 @@
     </div>
 
     <script>
-        let video = document.getElementById('video');
-        let canvas = document.getElementById('canvas');
-        let context = canvas.getContext('2d');
-        let stream = null;
+        const video = document.getElementById('video');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const captureCtx = captureCanvas.getContext('2d');
 
         const startCameraBtn = document.getElementById('startCamera');
         const stopCameraBtn = document.getElementById('stopCamera');
@@ -162,85 +181,222 @@
         const btnSalida = document.getElementById('btnSalida');
         const cameraStatus = document.getElementById('cameraStatus');
         const videoPlaceholder = document.getElementById('videoPlaceholder');
+        const faceWarning = document.getElementById('faceWarning');
         const loading = document.getElementById('loading');
         const resultDiv = document.getElementById('result');
         const lastRecordDiv = document.getElementById('lastRecord');
-        
-        let currentFacingMode = 'user'; // 'user' = frontal, 'environment' = trasera
 
-        // Función para activar cámara con facing mode específico
+        let stream = null;
+        let currentFacingMode = 'user';
+        let faceDetectionInterval = null;
+        let faceApiReady = false;
+        let faceDetected = false;
+
+        // --- Face API ---
+        async function loadFaceApi() {
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                faceApiReady = true;
+            } catch (e) {
+                console.warn('face-api.js no cargó, se omite detección visual:', e);
+            }
+        }
+
+        function startFaceDetection() {
+            if (!faceApiReady) return;
+            stopFaceDetection();
+            faceDetectionInterval = setInterval(detectFace, 300);
+        }
+
+        function stopFaceDetection() {
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            faceDetected = false;
+            faceWarning.style.opacity = '0';
+        }
+
+        function drawCornerBox(box, color) {
+            const c = Math.min(box.width, box.height) * 0.18;
+            overlayCtx.strokeStyle = color;
+            overlayCtx.lineWidth = 2;
+            overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
+
+            overlayCtx.lineWidth = 5;
+            [
+                [box.x,            box.y,            c,  0,  c],   // top-left
+                [box.x + box.width, box.y,           -c,  0,  c],   // top-right
+                [box.x,            box.y + box.height, c,  0, -c],  // bottom-left
+                [box.x + box.width, box.y + box.height, -c, 0, -c]  // bottom-right
+            ].forEach(([x, y, dx, dy, dy2]) => {
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(x + dx, y);
+                overlayCtx.lineTo(x, y);
+                overlayCtx.lineTo(x, y + (dy2 !== 0 ? dy2 : dy));
+                overlayCtx.stroke();
+            });
+        }
+
+        async function detectFace() {
+            if (!stream || video.readyState < 2) return;
+
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+            overlayCanvas.style.width = video.offsetWidth + 'px';
+            overlayCanvas.style.height = video.offsetHeight + 'px';
+
+            const detections = await faceapi.detectAllFaces(
+                video,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+            );
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (detections.length > 0) {
+                faceDetected = true;
+
+                detections.forEach(det => {
+                    const box = det.box;
+                    const videoArea = overlayCanvas.width * overlayCanvas.height;
+                    const faceArea = box.width * box.height;
+                    const coverage = faceArea / videoArea;
+
+                    // Verificar que el rostro esté centrado y tenga buen tamaño
+                    const centerX = box.x + box.width / 2;
+                    const centerY = box.y + box.height / 2;
+                    const relX = centerX / overlayCanvas.width;
+                    const relY = centerY / overlayCanvas.height;
+                    const centered = relX > 0.25 && relX < 0.75 && relY > 0.2 && relY < 0.8;
+                    const goodSize = coverage > 0.06; // al menos 6% del frame
+
+                    if (centered && goodSize) {
+                        // Verde: rostro bien posicionado
+                        drawCornerBox(box, '#22c55e');
+                        faceWarning.style.opacity = '0';
+                        faceWarning.style.color = '';
+                    } else {
+                        // Naranja: detectado pero mal posicionado o muy pequeño
+                        drawCornerBox(box, '#f97316');
+                        faceWarning.style.opacity = '1';
+                        faceWarning.style.color = '#f97316';
+                        faceWarning.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Centra o acerca tu rostro';
+                    }
+                });
+            } else {
+                faceDetected = false;
+                // Rojo: sin rostro detectado — borde rojo alrededor del frame
+                overlayCtx.strokeStyle = '#ef4444';
+                overlayCtx.lineWidth = 4;
+                overlayCtx.strokeRect(4, 4, overlayCanvas.width - 8, overlayCanvas.height - 8);
+
+                // Esquinas rojas
+                const c = 30;
+                overlayCtx.lineWidth = 6;
+                [
+                    [4, 4, c, 0, c],
+                    [overlayCanvas.width - 4, 4, -c, 0, c],
+                    [4, overlayCanvas.height - 4, c, 0, -c],
+                    [overlayCanvas.width - 4, overlayCanvas.height - 4, -c, 0, -c]
+                ].forEach(([x, y, dx, dy, dy2]) => {
+                    overlayCtx.beginPath();
+                    overlayCtx.moveTo(x + dx, y);
+                    overlayCtx.lineTo(x, y);
+                    overlayCtx.lineTo(x, y + (dy2 !== 0 ? dy2 : dy));
+                    overlayCtx.stroke();
+                });
+
+                faceWarning.style.opacity = '1';
+                faceWarning.style.color = '#ef4444';
+                faceWarning.innerHTML = '<i class="fas fa-times-circle mr-1"></i>No se detecta rostro';
+            }
+        }
+
+        // --- Camera ---
         async function activarCamara(facingMode) {
             try {
-                // Detener stream anterior si existe
                 if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
+                    stream.getTracks().forEach(t => t.stop());
                 }
-                
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
                         facingMode: facingMode
-                    } 
+                    }
                 });
                 video.srcObject = stream;
                 video.style.display = 'block';
-                videoPlaceholder.style.display = 'none';
+                videoPlaceholder.classList.add('hidden');
                 startCameraBtn.classList.add('hidden');
                 stopCameraBtn.classList.remove('hidden');
                 switchCameraBtn.classList.remove('hidden');
-                
-                const cameraType = facingMode === 'user' ? 'Frontal' : 'Trasera';
-                cameraStatus.innerHTML = `<i class="fas fa-circle text-green-500 animate-pulse"></i> Cámara ${cameraType} activa`;
-                
+
+                const tipo = facingMode === 'user' ? 'Frontal' : 'Trasera';
+                cameraStatus.innerHTML = `<i class="fas fa-circle text-green-500 animate-pulse"></i> Cámara ${tipo} activa`;
+
                 btnEntrada.disabled = false;
                 btnSalida.disabled = false;
+
+                video.addEventListener('loadedmetadata', () => {
+                    overlayCanvas.width = video.videoWidth;
+                    overlayCanvas.height = video.videoHeight;
+                    startFaceDetection();
+                }, { once: true });
+
             } catch (err) {
+                video.style.display = 'none';
+                videoPlaceholder.classList.remove('hidden');
+                stopCameraBtn.classList.add('hidden');
+                switchCameraBtn.classList.add('hidden');
+                startCameraBtn.classList.remove('hidden');
+                cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
                 showResult('error', 'Error al acceder a la cámara: ' + err.message);
             }
         }
 
-        // Activar cámara
-        startCameraBtn.addEventListener('click', async () => {
-            await activarCamara(currentFacingMode);
-        });
+        startCameraBtn.addEventListener('click', () => activarCamara(currentFacingMode));
 
-        // Cambiar cámara
-        switchCameraBtn.addEventListener('click', async () => {
+        switchCameraBtn.addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            await activarCamara(currentFacingMode);
+            activarCamara(currentFacingMode);
         });
 
-        // Detener cámara
         stopCameraBtn.addEventListener('click', () => {
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-                video.style.display = 'none';
-                videoPlaceholder.style.display = 'flex';
-                startCameraBtn.classList.remove('hidden');
-                stopCameraBtn.classList.add('hidden');
-                switchCameraBtn.classList.add('hidden');
-                cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
-                btnEntrada.disabled = true;
-                btnSalida.disabled = true;
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
             }
+            stopFaceDetection();
+            video.srcObject = null;
+            video.style.display = 'none';
+            videoPlaceholder.classList.remove('hidden');
+            startCameraBtn.classList.remove('hidden');
+            stopCameraBtn.classList.add('hidden');
+            switchCameraBtn.classList.add('hidden');
+            cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
+            btnEntrada.disabled = true;
+            btnSalida.disabled = true;
         });
 
-        // Capturar foto y enviar
+        // --- Captura y envío ---
         async function capturarYEnviar(tipo) {
             if (!stream) {
                 showResult('error', 'Por favor activa la cámara primero');
                 return;
             }
 
-            // Capturar frame del video
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            captureCanvas.width = video.videoWidth;
+            captureCanvas.height = video.videoHeight;
+            // Captura sin espejo (imagen original)
+            captureCtx.save();
+            captureCtx.scale(-1, 1);
+            captureCtx.drawImage(video, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
+            captureCtx.restore();
 
-            // Convertir a blob
-            canvas.toBlob(async (blob) => {
+            captureCanvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('foto', blob, 'captura.jpg');
                 formData.append('tipo', tipo);
@@ -251,8 +407,8 @@
                 btnSalida.disabled = true;
 
                 try {
-                    const endpoint = tipo === 'entrada' ? 
-                        '/api/registros/marcar_entrada/' : 
+                    const endpoint = tipo === 'entrada' ?
+                        '/api/registros/marcar_entrada/' :
                         '/api/registros/marcar_salida/';
 
                     const response = await fetch(endpoint, {
@@ -263,7 +419,7 @@
                     const data = await response.json();
 
                     if (response.ok && data.success) {
-                        showResult('success', 
+                        showResult('success',
                             `¡${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!<br>` +
                             `<strong>${data.empleado}</strong> (${data.codigo})<br>` +
                             `Hora: ${data.hora}<br>` +
@@ -283,14 +439,11 @@
             }, 'image/jpeg', 0.95);
         }
 
-        // Event listeners para botones
         btnEntrada.addEventListener('click', () => capturarYEnviar('entrada'));
         btnSalida.addEventListener('click', () => capturarYEnviar('salida'));
 
-        // Mostrar resultado
         function showResult(type, message) {
-            resultDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'border-green-500', 'border-red-500');
-            
+            resultDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'border-green-500', 'border-red-500', 'border-l-4');
             if (type === 'success') {
                 resultDiv.classList.add('bg-green-100', 'border-l-4', 'border-green-500');
                 resultDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i>${message}`;
@@ -300,7 +453,6 @@
             }
         }
 
-        // Actualizar último registro
         function updateLastRecord(data) {
             const now = new Date();
             lastRecordDiv.innerHTML = `
@@ -317,9 +469,11 @@
             `;
         }
 
-        // Deshabilitar botones al inicio
-        btnEntrada.disabled = true;
-        btnSalida.disabled = true;
+        // --- Init ---
+        (async () => {
+            await loadFaceApi();
+            await activarCamara(currentFacingMode);
+        })();
     </script>
 </body>
 </html>
