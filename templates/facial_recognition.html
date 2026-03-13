@@ -7,23 +7,17 @@
     <title>Reconocimiento Facial - Sistema de Asistencias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         #video {
             transform: scaleX(-1);
             border-radius: 1rem;
-            display: block;
-            width: 100%;
         }
-        #overlayCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+        #faceOverlay {
             transform: scaleX(-1);
             border-radius: 1rem;
-            pointer-events: none;
         }
-        #captureCanvas {
+        #canvas {
             display: none;
         }
         .loader {
@@ -38,7 +32,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -58,47 +51,47 @@
                 <!-- Video Section -->
                 <div class="bg-gray-900 p-6 flex flex-col items-center justify-center">
                     <div class="w-full max-w-md">
-                        <!-- Camera Status -->
-                        <div class="mb-3 text-center">
+                        <div class="mb-4 text-center">
                             <span id="cameraStatus" class="text-white text-sm">
-                                <i class="fas fa-circle text-yellow-400 animate-pulse"></i>
-                                Iniciando cámara...
+                                <i class="fas fa-circle text-red-500 animate-pulse"></i>
+                                Cámara desactivada
                             </span>
                         </div>
-
-                        <!-- Video + Overlay Canvas -->
-                        <div class="relative" id="videoContainer">
-                            <video id="video" autoplay playsinline muted></video>
-                            <canvas id="overlayCanvas"></canvas>
-                            <div id="videoPlaceholder" class="w-full aspect-video bg-gray-800 rounded-2xl flex items-center justify-center hidden">
+                        
+                        <!-- Video Preview -->
+                        <div class="relative">
+                            <video id="video" autoplay playsinline class="w-full bg-black"></video>
+                            <canvas id="faceOverlay" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+                            <div id="videoPlaceholder" class="w-full aspect-video bg-gray-800 rounded-2xl flex items-center justify-center">
                                 <div class="text-center text-gray-400">
                                     <i class="fas fa-video-slash text-6xl mb-4"></i>
-                                    <p>Cámara no disponible</p>
+                                    <p>Activa la cámara para comenzar</p>
                                 </div>
                             </div>
                         </div>
 
-                        <canvas id="captureCanvas"></canvas>
-
-                        <!-- Face Warning -->
-                        <div id="faceWarning" class="mt-3 text-center text-sm font-medium opacity-0" style="transition: opacity 0.3s ease, color 0.3s ease;">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            Centra o acerca tu rostro
+                        <!-- Indicador de rostro -->
+                        <div id="faceStatus" class="mt-2 text-center text-sm font-medium text-gray-500">
+                            <i class="fas fa-video-slash mr-1"></i>Activa la cámara
                         </div>
 
+                        <canvas id="canvas"></canvas>
+                        
                         <!-- Camera Controls -->
-                        <div class="mt-3 space-y-2">
-                            <button id="stopCamera" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition">
-                                <i class="fas fa-video-slash mr-2"></i>
-                                Detener
-                            </button>
-                            <button id="switchCamera" class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition">
+                        <div class="mt-4 space-y-2">
+                            <div class="flex gap-2">
+                                <button id="startCamera" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition">
+                                    <i class="fas fa-video mr-2"></i>
+                                    Activar Cámara
+                                </button>
+                                <button id="stopCamera" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition hidden">
+                                    <i class="fas fa-video-slash mr-2"></i>
+                                    Detener
+                                </button>
+                            </div>
+                            <button id="switchCamera" class="hidden w-full bg-gray-700 hover:bg-gray-800 text-white px-4 py-3 rounded-lg font-semibold transition">
                                 <i class="fas fa-sync-alt mr-2"></i>
                                 Cambiar Cámara
-                            </button>
-                            <button id="startCamera" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold transition hidden">
-                                <i class="fas fa-video mr-2"></i>
-                                Activar Cámara
                             </button>
                         </div>
                     </div>
@@ -107,15 +100,15 @@
                 <!-- Actions Section -->
                 <div class="p-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-6">Marcar Asistencia</h2>
-
+                    
                     <!-- Action Buttons -->
                     <div class="space-y-4 mb-6">
-                        <button id="btnEntrada" disabled class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
+                        <button id="btnEntrada" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
                             <i class="fas fa-arrow-right mr-2"></i>
                             Marcar Entrada
                         </button>
-
-                        <button id="btnSalida" disabled class="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
+                        
+                        <button id="btnSalida" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 shadow-lg">
                             <i class="fas fa-arrow-left mr-2"></i>
                             Marcar Salida
                         </button>
@@ -168,11 +161,10 @@
     </div>
 
     <script>
-        const video = document.getElementById('video');
-        const overlayCanvas = document.getElementById('overlayCanvas');
-        const captureCanvas = document.getElementById('captureCanvas');
-        const overlayCtx = overlayCanvas.getContext('2d');
-        const captureCtx = captureCanvas.getContext('2d');
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let stream = null;
 
         const startCameraBtn = document.getElementById('startCamera');
         const stopCameraBtn = document.getElementById('stopCamera');
@@ -181,222 +173,88 @@
         const btnSalida = document.getElementById('btnSalida');
         const cameraStatus = document.getElementById('cameraStatus');
         const videoPlaceholder = document.getElementById('videoPlaceholder');
-        const faceWarning = document.getElementById('faceWarning');
         const loading = document.getElementById('loading');
         const resultDiv = document.getElementById('result');
         const lastRecordDiv = document.getElementById('lastRecord');
+        
+        let currentFacingMode = 'user'; // 'user' = frontal, 'environment' = trasera
 
-        let stream = null;
-        let currentFacingMode = 'user';
-        let faceDetectionInterval = null;
-        let faceApiReady = false;
-        let faceDetected = false;
-
-        // --- Face API ---
-        async function loadFaceApi() {
-            try {
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                faceApiReady = true;
-            } catch (e) {
-                console.warn('face-api.js no cargó, se omite detección visual:', e);
-            }
-        }
-
-        function startFaceDetection() {
-            if (!faceApiReady) return;
-            stopFaceDetection();
-            faceDetectionInterval = setInterval(detectFace, 300);
-        }
-
-        function stopFaceDetection() {
-            if (faceDetectionInterval) {
-                clearInterval(faceDetectionInterval);
-                faceDetectionInterval = null;
-            }
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            faceDetected = false;
-            faceWarning.style.opacity = '0';
-        }
-
-        function drawCornerBox(box, color) {
-            const c = Math.min(box.width, box.height) * 0.18;
-            overlayCtx.strokeStyle = color;
-            overlayCtx.lineWidth = 2;
-            overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
-
-            overlayCtx.lineWidth = 5;
-            [
-                [box.x,            box.y,            c,  0,  c],   // top-left
-                [box.x + box.width, box.y,           -c,  0,  c],   // top-right
-                [box.x,            box.y + box.height, c,  0, -c],  // bottom-left
-                [box.x + box.width, box.y + box.height, -c, 0, -c]  // bottom-right
-            ].forEach(([x, y, dx, dy, dy2]) => {
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(x + dx, y);
-                overlayCtx.lineTo(x, y);
-                overlayCtx.lineTo(x, y + (dy2 !== 0 ? dy2 : dy));
-                overlayCtx.stroke();
-            });
-        }
-
-        async function detectFace() {
-            if (!stream || video.readyState < 2) return;
-
-            overlayCanvas.width = video.videoWidth;
-            overlayCanvas.height = video.videoHeight;
-            overlayCanvas.style.width = video.offsetWidth + 'px';
-            overlayCanvas.style.height = video.offsetHeight + 'px';
-
-            const detections = await faceapi.detectAllFaces(
-                video,
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-            );
-
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-            if (detections.length > 0) {
-                faceDetected = true;
-
-                detections.forEach(det => {
-                    const box = det.box;
-                    const videoArea = overlayCanvas.width * overlayCanvas.height;
-                    const faceArea = box.width * box.height;
-                    const coverage = faceArea / videoArea;
-
-                    // Verificar que el rostro esté centrado y tenga buen tamaño
-                    const centerX = box.x + box.width / 2;
-                    const centerY = box.y + box.height / 2;
-                    const relX = centerX / overlayCanvas.width;
-                    const relY = centerY / overlayCanvas.height;
-                    const centered = relX > 0.25 && relX < 0.75 && relY > 0.2 && relY < 0.8;
-                    const goodSize = coverage > 0.06; // al menos 6% del frame
-
-                    if (centered && goodSize) {
-                        // Verde: rostro bien posicionado
-                        drawCornerBox(box, '#22c55e');
-                        faceWarning.style.opacity = '0';
-                        faceWarning.style.color = '';
-                    } else {
-                        // Naranja: detectado pero mal posicionado o muy pequeño
-                        drawCornerBox(box, '#f97316');
-                        faceWarning.style.opacity = '1';
-                        faceWarning.style.color = '#f97316';
-                        faceWarning.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Centra o acerca tu rostro';
-                    }
-                });
-            } else {
-                faceDetected = false;
-                // Rojo: sin rostro detectado — borde rojo alrededor del frame
-                overlayCtx.strokeStyle = '#ef4444';
-                overlayCtx.lineWidth = 4;
-                overlayCtx.strokeRect(4, 4, overlayCanvas.width - 8, overlayCanvas.height - 8);
-
-                // Esquinas rojas
-                const c = 30;
-                overlayCtx.lineWidth = 6;
-                [
-                    [4, 4, c, 0, c],
-                    [overlayCanvas.width - 4, 4, -c, 0, c],
-                    [4, overlayCanvas.height - 4, c, 0, -c],
-                    [overlayCanvas.width - 4, overlayCanvas.height - 4, -c, 0, -c]
-                ].forEach(([x, y, dx, dy, dy2]) => {
-                    overlayCtx.beginPath();
-                    overlayCtx.moveTo(x + dx, y);
-                    overlayCtx.lineTo(x, y);
-                    overlayCtx.lineTo(x, y + (dy2 !== 0 ? dy2 : dy));
-                    overlayCtx.stroke();
-                });
-
-                faceWarning.style.opacity = '1';
-                faceWarning.style.color = '#ef4444';
-                faceWarning.innerHTML = '<i class="fas fa-times-circle mr-1"></i>No se detecta rostro';
-            }
-        }
-
-        // --- Camera ---
+        // Función para activar cámara con facing mode específico
         async function activarCamara(facingMode) {
             try {
+                // Detener stream anterior si existe
                 if (stream) {
-                    stream.getTracks().forEach(t => t.stop());
+                    stream.getTracks().forEach(track => track.stop());
                 }
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
+                
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
                         facingMode: facingMode
-                    }
+                    } 
                 });
                 video.srcObject = stream;
                 video.style.display = 'block';
-                videoPlaceholder.classList.add('hidden');
+                videoPlaceholder.style.display = 'none';
                 startCameraBtn.classList.add('hidden');
                 stopCameraBtn.classList.remove('hidden');
                 switchCameraBtn.classList.remove('hidden');
 
-                const tipo = facingMode === 'user' ? 'Frontal' : 'Trasera';
-                cameraStatus.innerHTML = `<i class="fas fa-circle text-green-500 animate-pulse"></i> Cámara ${tipo} activa`;
+                const cameraType = facingMode === 'user' ? 'Frontal' : 'Trasera';
+                cameraStatus.innerHTML = `<i class="fas fa-circle text-green-500 animate-pulse"></i> Cámara ${cameraType} activa`;
 
                 btnEntrada.disabled = false;
                 btnSalida.disabled = false;
-
-                video.addEventListener('loadedmetadata', () => {
-                    overlayCanvas.width = video.videoWidth;
-                    overlayCanvas.height = video.videoHeight;
-                    startFaceDetection();
-                }, { once: true });
-
+                iniciarDeteccion();
             } catch (err) {
-                video.style.display = 'none';
-                videoPlaceholder.classList.remove('hidden');
-                stopCameraBtn.classList.add('hidden');
-                switchCameraBtn.classList.add('hidden');
-                startCameraBtn.classList.remove('hidden');
-                cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
                 showResult('error', 'Error al acceder a la cámara: ' + err.message);
             }
         }
 
-        startCameraBtn.addEventListener('click', () => activarCamara(currentFacingMode));
-
-        switchCameraBtn.addEventListener('click', () => {
-            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            activarCamara(currentFacingMode);
+        // Activar cámara
+        startCameraBtn.addEventListener('click', async () => {
+            await activarCamara(currentFacingMode);
         });
 
+        // Cambiar cámara
+        switchCameraBtn.addEventListener('click', async () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            await activarCamara(currentFacingMode);
+        });
+
+        // Detener cámara
         stopCameraBtn.addEventListener('click', () => {
             if (stream) {
-                stream.getTracks().forEach(t => t.stop());
+                stream.getTracks().forEach(track => track.stop());
                 stream = null;
+                video.srcObject = null;
+                video.style.display = 'none';
+                videoPlaceholder.style.display = 'flex';
+                startCameraBtn.classList.remove('hidden');
+                stopCameraBtn.classList.add('hidden');
+                switchCameraBtn.classList.add('hidden');
+                cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
+                btnEntrada.disabled = true;
+                btnSalida.disabled = true;
+                detenerDeteccion();
             }
-            stopFaceDetection();
-            video.srcObject = null;
-            video.style.display = 'none';
-            videoPlaceholder.classList.remove('hidden');
-            startCameraBtn.classList.remove('hidden');
-            stopCameraBtn.classList.add('hidden');
-            switchCameraBtn.classList.add('hidden');
-            cameraStatus.innerHTML = '<i class="fas fa-circle text-red-500 animate-pulse"></i> Cámara desactivada';
-            btnEntrada.disabled = true;
-            btnSalida.disabled = true;
         });
 
-        // --- Captura y envío ---
+        // Capturar foto y enviar
         async function capturarYEnviar(tipo) {
             if (!stream) {
                 showResult('error', 'Por favor activa la cámara primero');
                 return;
             }
 
-            captureCanvas.width = video.videoWidth;
-            captureCanvas.height = video.videoHeight;
-            // Captura sin espejo (imagen original)
-            captureCtx.save();
-            captureCtx.scale(-1, 1);
-            captureCtx.drawImage(video, -captureCanvas.width, 0, captureCanvas.width, captureCanvas.height);
-            captureCtx.restore();
+            // Capturar frame del video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            captureCanvas.toBlob(async (blob) => {
+            // Convertir a blob
+            canvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('foto', blob, 'captura.jpg');
                 formData.append('tipo', tipo);
@@ -407,8 +265,8 @@
                 btnSalida.disabled = true;
 
                 try {
-                    const endpoint = tipo === 'entrada' ?
-                        '/api/registros/marcar_entrada/' :
+                    const endpoint = tipo === 'entrada' ? 
+                        '/api/registros/marcar_entrada/' : 
                         '/api/registros/marcar_salida/';
 
                     const response = await fetch(endpoint, {
@@ -419,7 +277,7 @@
                     const data = await response.json();
 
                     if (response.ok && data.success) {
-                        showResult('success',
+                        showResult('success', 
                             `¡${tipo.charAt(0).toUpperCase() + tipo.slice(1)} registrada!<br>` +
                             `<strong>${data.empleado}</strong> (${data.codigo})<br>` +
                             `Hora: ${data.hora}<br>` +
@@ -439,11 +297,14 @@
             }, 'image/jpeg', 0.95);
         }
 
+        // Event listeners para botones
         btnEntrada.addEventListener('click', () => capturarYEnviar('entrada'));
         btnSalida.addEventListener('click', () => capturarYEnviar('salida'));
 
+        // Mostrar resultado
         function showResult(type, message) {
-            resultDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'border-green-500', 'border-red-500', 'border-l-4');
+            resultDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'border-green-500', 'border-red-500');
+            
             if (type === 'success') {
                 resultDiv.classList.add('bg-green-100', 'border-l-4', 'border-green-500');
                 resultDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2"></i>${message}`;
@@ -453,6 +314,7 @@
             }
         }
 
+        // Actualizar último registro
         function updateLastRecord(data) {
             const now = new Date();
             lastRecordDiv.innerHTML = `
@@ -469,11 +331,130 @@
             `;
         }
 
-        // --- Init ---
+        // Deshabilitar botones al inicio
+        btnEntrada.disabled = true;
+        btnSalida.disabled = true;
+
+        // ── Detección de rostro en tiempo real ──────────────────────────
+        const faceOverlay = document.getElementById('faceOverlay');
+        const faceOverlayCtx = faceOverlay.getContext('2d');
+        let faceDetectionActive = false;
+        let modelosCargados = false;
+
+        // Pre-cargar modelo al abrir la página
         (async () => {
-            await loadFaceApi();
-            await activarCamara(currentFacingMode);
+            try {
+                await faceapi.nets.tinyFaceDetector.loadFromUri(
+                    'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights'
+                );
+                modelosCargados = true;
+            } catch(e) {
+                console.warn('Modelos de detección no disponibles:', e);
+            }
         })();
+
+        async function iniciarDeteccion() {
+            if (!modelosCargados) {
+                try {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(
+                        'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights'
+                    );
+                    modelosCargados = true;
+                } catch(e) { return; }
+            }
+            faceDetectionActive = true;
+            detectarRostroLoop();
+        }
+
+        function detenerDeteccion() {
+            faceDetectionActive = false;
+            faceOverlayCtx.clearRect(0, 0, faceOverlay.width, faceOverlay.height);
+            actualizarEstadoRostro('inactivo');
+        }
+
+        async function detectarRostroLoop() {
+            if (!faceDetectionActive || !stream) return;
+
+            if (video.readyState >= 2 && video.videoWidth > 0) {
+                faceOverlay.width = video.videoWidth;
+                faceOverlay.height = video.videoHeight;
+                faceOverlayCtx.clearRect(0, 0, faceOverlay.width, faceOverlay.height);
+
+                try {
+                    const detecciones = await faceapi.detectAllFaces(
+                        video,
+                        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+                    );
+
+                    if (detecciones.length === 1) {
+                        const box = detecciones[0].box;
+                        const areaRostro = (box.width * box.height) / (video.videoWidth * video.videoHeight);
+                        const cx = box.x + box.width / 2;
+                        const cy = box.y + box.height / 2;
+                        const centrado = Math.abs(cx - video.videoWidth / 2) < video.videoWidth * 0.3 &&
+                                         Math.abs(cy - video.videoHeight / 2) < video.videoHeight * 0.3;
+                        const suficienteGrande = areaRostro > 0.06;
+
+                        if (centrado && suficienteGrande) {
+                            dibujarMarco(box, '#22c55e');
+                            actualizarEstadoRostro('ok');
+                        } else {
+                            dibujarMarco(box, '#f59e0b');
+                            actualizarEstadoRostro('advertencia');
+                        }
+                    } else if (detecciones.length === 0) {
+                        actualizarEstadoRostro('ninguno');
+                    } else {
+                        detecciones.forEach(d => dibujarMarco(d.box, '#ef4444'));
+                        actualizarEstadoRostro('multiple');
+                    }
+                } catch(e) {}
+            }
+
+            setTimeout(() => { if (faceDetectionActive) requestAnimationFrame(detectarRostroLoop); }, 150);
+        }
+
+        function dibujarMarco(box, color) {
+            const { x, y, width, height } = box;
+            const esquina = Math.min(width, height) * 0.22;
+
+            faceOverlayCtx.lineCap = 'round';
+            faceOverlayCtx.lineWidth = 3;
+            faceOverlayCtx.shadowColor = color;
+            faceOverlayCtx.shadowBlur = 14;
+            faceOverlayCtx.strokeStyle = color;
+
+            faceOverlayCtx.beginPath();
+            // Esquina superior izquierda
+            faceOverlayCtx.moveTo(x + esquina, y); faceOverlayCtx.lineTo(x, y); faceOverlayCtx.lineTo(x, y + esquina);
+            // Esquina superior derecha
+            faceOverlayCtx.moveTo(x + width - esquina, y); faceOverlayCtx.lineTo(x + width, y); faceOverlayCtx.lineTo(x + width, y + esquina);
+            // Esquina inferior izquierda
+            faceOverlayCtx.moveTo(x, y + height - esquina); faceOverlayCtx.lineTo(x, y + height); faceOverlayCtx.lineTo(x + esquina, y + height);
+            // Esquina inferior derecha
+            faceOverlayCtx.moveTo(x + width - esquina, y + height); faceOverlayCtx.lineTo(x + width, y + height); faceOverlayCtx.lineTo(x + width, y + height - esquina);
+            faceOverlayCtx.stroke();
+
+            // Marco interior semi-transparente
+            faceOverlayCtx.shadowBlur = 0;
+            faceOverlayCtx.strokeStyle = color + '33';
+            faceOverlayCtx.lineWidth = 1;
+            faceOverlayCtx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+        }
+
+        function actualizarEstadoRostro(estado) {
+            const el = document.getElementById('faceStatus');
+            const estados = {
+                'ok':          { texto: 'Rostro listo — puedes marcar',      color: 'text-green-400',  icono: 'fa-circle-check' },
+                'advertencia': { texto: 'Centra o acerca tu rostro',          color: 'text-amber-400',  icono: 'fa-triangle-exclamation' },
+                'ninguno':     { texto: 'No se detecta ningún rostro',        color: 'text-red-400',    icono: 'fa-face-frown' },
+                'multiple':    { texto: 'Solo un rostro a la vez',            color: 'text-red-400',    icono: 'fa-users' },
+                'inactivo':    { texto: 'Activa la cámara',                   color: 'text-gray-500',   icono: 'fa-video-slash' },
+            };
+            const s = estados[estado] || estados['inactivo'];
+            el.innerHTML = `<i class="fas ${s.icono} mr-1"></i>${s.texto}`;
+            el.className = `mt-2 text-center text-sm font-medium transition-colors duration-300 ${s.color}`;
+        }
     </script>
 </body>
 </html>
