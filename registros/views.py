@@ -130,18 +130,31 @@ class RegistroAsistenciaViewSet(viewsets.ModelViewSet):
 
         # Si no encontramos registro de turno nocturno, usar el día actual
         if registro is None:
-            registro, created = RegistroAsistencia.objects.get_or_create(
-                empleado=empleado,
-                fecha=hoy,
-                defaults={
-                    'reconocimiento_facial': True,
-                    'confianza_reconocimiento': confianza,
-                    'latitud': latitud,
-                    'longitud': longitud,
-                    'ubicacion': ubicacion
-                }
-            )
-        
+            if tipo == 'salida':
+                # Para salida, el registro debe existir con una entrada previa
+                try:
+                    registro = RegistroAsistencia.objects.get(
+                        empleado=empleado,
+                        fecha=hoy,
+                    )
+                except RegistroAsistencia.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': 'No hay entrada registrada para marcar salida'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                registro, created = RegistroAsistencia.objects.get_or_create(
+                    empleado=empleado,
+                    fecha=hoy,
+                    defaults={
+                        'reconocimiento_facial': True,
+                        'confianza_reconocimiento': confianza,
+                        'latitud': latitud,
+                        'longitud': longitud,
+                        'ubicacion': ubicacion
+                    }
+                )
+
         # Actualizar según el tipo
         if tipo == 'entrada':
             if registro.hora_entrada:

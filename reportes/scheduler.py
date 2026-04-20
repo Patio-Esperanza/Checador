@@ -9,7 +9,7 @@ from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 from django_apscheduler import util
 
-from reportes.models import ConfiguracionReporte
+from reportes.models import ConfiguracionReporte, DestinatarioReporte
 from reportes.services.email_service import EmailReportService
 
 
@@ -37,11 +37,44 @@ def enviar_reporte_semanal_job():
 
 
 @util.close_old_connections
+def verificar_ausencias_job():
+    """
+    Corre cada 30 minutos. Detecta empleados que no han marcado entrada
+    30 minutos después de su hora programada y envía alerta por email.
+    """
+    from zoneinfo import ZoneInfo
+    from reportes.services.ausencias_service import AusenciasAlertService
+
+    MEXICO_TZ = ZoneInfo('America/Mexico_City')
+    ahora_mexico = timezone.now().astimezone(MEXICO_TZ)
+
+    ausentes = AusenciasAlertService.obtener_ausentes(ahora_mexico)
+
+    if not ausentes:
+        return
+
+    resultado = AusenciasAlertService.enviar_alerta(ausentes, ahora_mexico)
+    if resultado['success']:
+        print(f"[{ahora_mexico.strftime('%H:%M')}] ✓ Alerta ausencias: {resultado['message']}")
+    else:
+        print(f"[{ahora_mexico.strftime('%H:%M')}] ✗ Error alerta ausencias: {resultado['message']}")
+
+
+@util.close_old_connections
 def delete_old_job_executions(max_age=604_800):
     """
     Elimina ejecuciones de jobs antiguas (por defecto: mayores a 7 días)
     """
     DjangoJobExecution.objects.delete_old_job_executions(max_age)
+
+
+def _asegurar_destinatario_default():
+    """Garantiza que el email de administración esté en la lista de destinatarios."""
+    EMAIL_DEFAULT = 'xoyocl2@gmail.com'
+    DestinatarioReporte.objects.get_or_create(
+        email=EMAIL_DEFAULT,
+        defaults={'nombre': 'Administrador', 'activo': True},
+    )
 
 
 def start_scheduler():
@@ -50,7 +83,24 @@ def start_scheduler():
     """
     scheduler = BackgroundScheduler()
     scheduler.add_jobstore(DjangoJobStore(), "default")
-    
+
+    # Garantizar destinatario de administración
+    try:
+        _asegurar_destinatario_default()
+    except Exception as e:
+        print(f"Aviso: no se pudo verificar destinatario default: {e}")
+
+    # Job de alertas de ausencias — corre cada 30 minutos
+    scheduler.add_job(
+        verificar_ausencias_job,
+        trigger=CronTrigger(minute='0,30'),
+        id='verificar_ausencias',
+        max_instances=1,
+        replace_existing=True,
+        name='Verificar ausencias de empleados',
+    )
+    print("✓ Job de alertas de ausencias configurado (cada 30 min)")
+
     # Obtener configuración
     try:
         config = ConfiguracionReporte.objects.first()
@@ -67,7 +117,7 @@ def start_scheduler():
             # dia_envio: 1=Lunes, 2=Martes, ..., 7=Domingo
             # APScheduler usa: 0=Lunes, 1=Martes, ..., 6=Domingo
             day_of_week = config.dia_envio - 1 if config.dia_envio > 0 else 0
-            
+
             # Manejar hora_envio como string o time object
             hora_envio = config.hora_envio
             if isinstance(hora_envio, str):
@@ -78,7 +128,7 @@ def start_scheduler():
             else:
                 hora = hora_envio.hour
                 minuto = hora_envio.minute
-            
+
             scheduler.add_job(
                 enviar_reporte_semanal_job,
                 trigger=CronTrigger(
@@ -91,16 +141,14 @@ def start_scheduler():
                 replace_existing=True,
                 name="Envío de reporte semanal de asistencias"
             )
-            
+
             dia_nombre = dict(ConfiguracionReporte.DIA_SEMANA_CHOICES).get(config.dia_envio)
             print(f"✓ Scheduler configurado: Reporte cada {dia_nombre} a las {config.hora_envio}")
         else:
-            print("⚠ Scheduler no iniciado: El envío de reportes está desactivado")
-            return None
-            
+            print("⚠ Reporte semanal desactivado — solo correrán alertas de ausencias")
+
     except Exception as e:
-        print(f"Error al configurar scheduler: {e}")
-        return None
+        print(f"Error al configurar reporte semanal: {e}")
     
     # Job para limpiar ejecuciones antiguas (diario a las 00:00)
     scheduler.add_job(
